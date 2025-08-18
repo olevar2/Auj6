@@ -1,0 +1,168 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AUJ Platform - Agent Performance",
+    "description": "Comprehensive agent performance monitoring for AUJ trading platform",
+    "tags": ["auj", "platform", "agents", "trading"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Agent Win Rates",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "auj_agent_win_rate",
+            "legendFormat": "{{agent_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.4
+                },
+                {
+                  "color": "green",
+                  "value": 0.6
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Total Trades by Agent",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(auj_agent_trades_total[5m])",
+            "legendFormat": "{{agent_name}} - {{result}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ops"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Agent Execution Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(auj_agent_execution_time_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile - {{agent_name}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(auj_agent_execution_time_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile - {{agent_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Agent Profit/Loss",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "auj_agent_profit_loss",
+            "legendFormat": "{{agent_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Mission Impact - Children Helped Estimate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "auj_agent_profit_loss / 100",
+            "legendFormat": "Children Helped"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "blue",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 1
+                },
+                {
+                  "color": "yellow",
+                  "value": 10
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        }
+      }
+    ]
+  }
+}

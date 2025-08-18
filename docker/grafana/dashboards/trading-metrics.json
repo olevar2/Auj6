@@ -1,0 +1,240 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AUJ Platform - Trading Metrics",
+    "description": "Trading performance and market metrics for AUJ platform",
+    "tags": ["auj", "platform", "trading", "pnl"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Daily P&L",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "auj_daily_pnl",
+            "legendFormat": "Daily P&L"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 100
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Open Positions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(auj_open_positions_total)",
+            "legendFormat": "Total Open Positions"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 5
+                },
+                {
+                  "color": "red",
+                  "value": 8
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "API Response Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(auj_api_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(auj_api_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "API Requests Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(auj_api_requests_total[5m])",
+            "legendFormat": "{{endpoint}} - {{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 4
+        }
+      },
+      {
+        "id": 5,
+        "title": "Indicator Calculation Performance",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(auj_indicator_calculation_time_seconds_bucket[5m]))",
+            "legendFormat": "{{indicator_name}} - 95th percentile"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 4
+        }
+      },
+      {
+        "id": 6,
+        "title": "Positions by Symbol",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "auj_open_positions_total",
+            "legendFormat": "{{symbol}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 7,
+        "title": "Platform Mission Metrics",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(auj_agent_profit_loss)",
+            "legendFormat": "Total Platform Profit"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0
+                },
+                {
+                  "color": "green",
+                  "value": 1000
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Mission Milestones",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(auj_agent_profit_loss[1h]) > 100",
+          "iconColor": "green",
+          "titleFormat": "Profit Milestone: +$100",
+          "textFormat": "Another $100 generated for helping children!"
+        }
+      ]
+    }
+  }
+}

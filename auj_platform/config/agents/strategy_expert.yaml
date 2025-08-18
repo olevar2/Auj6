@@ -1,0 +1,33 @@
+# Strategy Expert Agent Configuration
+# This file contains configurable parameters for the StrategyExpert agent
+
+# Core strategy parameters
+momentum_threshold: 0.6  # Minimum momentum strength for signal generation
+trend_strength_threshold: 0.7  # Minimum trend strength for trend confirmation
+confluence_required: 3  # Minimum number of indicators that must agree
+risk_reward_ratio: 2.0  # Minimum risk-to-reward ratio for trades
+
+# RSI parameters
+rsi_oversold_threshold: 30  # RSI level indicating oversold conditions
+rsi_neutral_low: 45  # Lower bound of RSI neutral zone
+rsi_neutral_high: 55  # Upper bound of RSI neutral zone
+rsi_overbought_threshold: 70  # RSI level indicating overbought conditions
+
+# Trend confirmation parameters
+min_trend_votes: 2  # Minimum number of trend indicators for confirmation
+min_bullish_votes: 2  # Minimum bullish votes for bullish trend confirmation
+min_bearish_votes: 2  # Minimum bearish votes for bearish trend confirmation
+
+# Timeframe configuration
+primary_timeframe: "1H"  # Primary analysis timeframe
+confirmation_timeframes:  # Additional timeframes for confirmation
+  - "4H"
+  - "1D"
+
+# Signal strength parameters
+signal_strength_multiplier: 1.0  # Multiplier for signal strength calculation
+confidence_boost_factor: 0.1  # Additional confidence for strong signals
+
+# Logging and debugging
+debug_mode: false  # Enable detailed debug logging
+log_signal_details: true  # Log detailed signal analysis

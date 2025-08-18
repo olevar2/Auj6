@@ -1,0 +1,41 @@
+# Risk Genius Agent Configuration
+# This file contains configurable parameters for the RiskGenius agent
+
+# Volatility thresholds
+volatility_threshold_high: 0.025  # 2.5% daily volatility - high risk threshold
+volatility_threshold_low: 0.008   # 0.8% daily volatility - low risk threshold
+
+# Risk management parameters
+risk_tolerance: 0.02              # 2% maximum risk per trade
+var_confidence_level: 0.95        # 95% VaR confidence level
+drawdown_threshold: 0.15          # 15% maximum drawdown alert threshold
+
+# Statistical analysis parameters
+lookback_period: 20              # Number of periods for statistical calculations
+volatility_window: 14            # Window size for volatility calculations
+correlation_threshold: 0.7       # Threshold for correlation analysis
+
+# Risk scoring parameters
+high_volatility_score: 0.8       # Risk score for high volatility conditions
+medium_volatility_score: 0.5     # Risk score for medium volatility conditions
+low_volatility_score: 0.2        # Risk score for low volatility conditions
+
+# Alert thresholds
+extreme_volatility_multiplier: 2.0  # Multiplier for extreme volatility detection
+volatility_spike_threshold: 1.5     # Threshold for volatility spike detection
+
+# Position sizing parameters
+max_position_size_pct: 0.1       # Maximum position size as % of portfolio
+min_position_size_pct: 0.01      # Minimum position size as % of portfolio
+volatility_adjustment_factor: 2.0 # Factor for volatility-based position sizing
+
+# Timeframe configuration
+risk_assessment_timeframe: "1H"   # Primary timeframe for risk assessment
+volatility_timeframes:            # Timeframes for volatility analysis
+  - "1H"
+  - "4H"
+  - "1D"
+
+# Logging and debugging
+debug_mode: false                 # Enable detailed debug logging
+log_risk_calculations: true      # Log detailed risk calculations

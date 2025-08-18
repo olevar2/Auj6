@@ -1,0 +1,133 @@
+version: '3.8'
+
+# Development environment overrides for AUJ Platform
+services:
+  auj-platform:
+    build:
+      target: development
+    container_name: auj_platform_dev
+    environment:
+      - AUJ_ENV=development
+      - DEBUG=true
+    volumes:
+      # Mount source code for live reloading
+      - ./auj_platform:/app:cached
+      - ./auj_platform/data:/app/data
+      - ./auj_platform/logs:/app/logs
+    ports:
+      - "8000:8000"   # API
+      - "8501:8501"   # Dashboard
+      - "8888:8888"   # Jupyter notebook
+      - "5678:5678"   # Debugger port
+    command: >
+      sh -c "
+        echo 'Starting AUJ Platform in development mode...' &&
+        python -m pip install --no-cache-dir debugpy &&
+        python -m debugpy --listen 0.0.0.0:5678 --wait-for-client src/main.py
+      "
+    stdin_open: true
+    tty: true
+
+  # Development database with more logging
+  postgres:
+    environment:
+      POSTGRES_DB: auj_platform_dev
+      POSTGRES_USER: auj_dev_user
+      POSTGRES_PASSWORD: auj_dev_password
+    command: >
+      postgres 
+      -c log_statement=all 
+      -c log_destination=stderr 
+      -c log_min_duration_statement=0
+    ports:
+      - "5433:5432"  # Different port to avoid conflicts
+
+  # Redis with debug logging
+  redis:
+    command: redis-server --appendonly yes --loglevel debug --requirepass auj_dev_redis_password
+    ports:
+      - "6380:6379"  # Different port for dev
+
+  # RabbitMQ with easier access for development
+  rabbitmq:
+    environment:
+      RABBITMQ_DEFAULT_USER: auj_dev_user
+      RABBITMQ_DEFAULT_PASS: auj_dev_password
+      RABBITMQ_DEFAULT_VHOST: auj_dev_vhost
+    ports:
+      - "5673:5672"   # Different AMQP port
+      - "15673:15672" # Different management port
+
+  # Prometheus with shorter retention for dev
+  prometheus:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=7d'  # Shorter retention for dev
+      - '--log.level=debug'
+    ports:
+      - "9091:9090"   # Different port for dev
+
+  # Grafana with development settings
+  grafana:
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: true
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Editor
+      GF_LOG_LEVEL: debug
+    ports:
+      - "3001:3000"   # Different port for dev
+
+  # Development tools container
+  dev-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: auj_dev_tools
+    volumes:
+      - ./auj_platform:/app:cached
+    working_dir: /app
+    command: >
+      sh -c "
+        echo 'Starting development tools container...' &&
+        echo 'Available commands:' &&
+        echo '  pytest - Run tests' &&
+        echo '  black . - Format code' &&
+        echo '  flake8 . - Lint code' &&
+        echo '  mypy . - Type checking' &&
+        echo '  jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root - Start Jupyter' &&
+        tail -f /dev/null
+      "
+    ports:
+      - "8889:8888"   # Jupyter lab
+    networks:
+      - auj_network
+    profiles:
+      - tools
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: auj_pgadmin_dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@auj.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - auj_network
+    profiles:
+      - tools
+
+# Additional volumes for development
+volumes:
+  pgadmin_data:
+    driver: local

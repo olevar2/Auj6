@@ -1,0 +1,235 @@
+# System Health Monitor Configuration
+# ===================================
+# Configuration for the AUJ Platform System Health Monitor
+
+monitoring:
+  # Monitoring intervals and retention
+  check_interval: 30                    # seconds between health checks
+  metric_retention_days: 7              # days to retain metric history
+  baseline_update_hours: 24             # hours between baseline updates
+
+  # Alert thresholds
+  thresholds:
+    # System resource thresholds
+    cpu_usage:
+      warning_max: 80.0                 # CPU usage warning threshold (%)
+      critical_max: 95.0                # CPU usage critical threshold (%)
+      trend_warning_slope: 5.0          # Rate of change warning
+      trend_critical_slope: 10.0        # Rate of change critical
+    
+    memory_usage:
+      warning_max: 85.0                 # Memory usage warning threshold (%)
+      critical_max: 95.0                # Memory usage critical threshold (%)
+    
+    disk_usage:
+      warning_max: 85.0                 # Disk usage warning threshold (%)
+      critical_max: 95.0                # Disk usage critical threshold (%)
+    
+    # Performance thresholds
+    database_response_time:
+      warning_max: 1.0                  # Database response time warning (seconds)
+      critical_max: 3.0                 # Database response time critical (seconds)
+    
+    api_response_time:
+      warning_max: 2.0                  # API response time warning (seconds)
+      critical_max: 5.0                 # API response time critical (seconds)
+    
+    broker_response_time:
+      warning_max: 1.5                  # Broker response time warning (seconds)
+      critical_max: 4.0                 # Broker response time critical (seconds)
+    
+    # Error rate thresholds
+    error_rate:
+      warning_max: 0.05                 # 5% error rate warning
+      critical_max: 0.1                 # 10% error rate critical
+    
+    # Queue depth thresholds
+    queue_depth:
+      warning_max: 1000                 # Queue depth warning
+      critical_max: 5000                # Queue depth critical
+
+  # Notification settings
+  notifications:
+    # Email notifications
+    email:
+      enabled: false                    # Enable email notifications
+      smtp_server: "smtp.gmail.com"     # SMTP server
+      smtp_port: 587                    # SMTP port
+      username: ""                      # SMTP username
+      password: ""                      # SMTP password (use environment variable)
+      from_email: "alerts@auj-platform.com"
+      to_emails:
+        - "admin@auj-platform.com"
+        - "devops@auj-platform.com"
+    
+    # Slack notifications
+    slack:
+      enabled: false                    # Enable Slack notifications
+      webhook_url: ""                   # Slack webhook URL
+      channel: "#alerts"                # Slack channel
+    
+    # Custom webhook notifications
+    webhook:
+      enabled: false                    # Enable webhook notifications
+      url: ""                          # Webhook URL
+      headers:                         # Custom headers
+        Authorization: "Bearer token"
+        Content-Type: "application/json"
+
+  # Alert management
+  alert_settings:
+    # Alert suppression (prevent spam)
+    suppression:
+      enabled: true                     # Enable alert suppression
+      max_similar_alerts: 3             # Max similar alerts before suppression
+      suppression_window_minutes: 5     # Time window for suppression
+    
+    # Alert escalation
+    escalation:
+      enabled: true                     # Enable alert escalation
+      escalation_delay_minutes: 15      # Minutes before escalation
+      escalate_severities:              # Severities to escalate
+        - critical
+        - fatal
+    
+    # Auto-resolution
+    auto_resolution:
+      enabled: true                     # Enable auto-resolution
+      resolution_delay_minutes: 30      # Minutes before auto-resolution
+      resolve_when_healthy: true        # Resolve when component becomes healthy
+
+# API settings for health check endpoints
+api_settings:
+  enabled: true                         # Enable API health checks
+  host: "localhost"                     # API host
+  port: 8000                           # API port
+  health_endpoints:                     # Endpoints to monitor
+    - "/health"
+    - "/api/status"
+    - "/api/metrics"
+
+# Database health monitoring
+database_monitoring:
+  enabled: true                         # Enable database monitoring
+  connection_timeout: 5                 # Connection timeout (seconds)
+  query_timeout: 10                     # Query timeout (seconds)
+  check_query: "SELECT 1"               # Simple health check query
+  
+  # Connection pool monitoring
+  pool_monitoring:
+    enabled: true                       # Monitor connection pool
+    warn_active_connections: 80         # Warning threshold for active connections
+    critical_active_connections: 95     # Critical threshold for active connections
+
+# Broker connection monitoring
+broker_monitoring:
+  enabled: true                         # Enable broker monitoring
+  connection_timeout: 10                # Connection timeout (seconds)
+  ping_interval: 30                     # Ping interval (seconds)
+  
+  # MetaApi-specific monitoring
+  metaapi:
+    enabled: true                       # Enable MetaApi monitoring
+    api_timeout: 30                     # API request timeout
+    websocket_timeout: 60               # WebSocket connection timeout
+    health_check_interval: 60           # Health check interval
+    token_validation: true              # Validate API token
+    account_validation: true            # Validate account access
+    
+    # MetaApi performance thresholds
+    thresholds:
+      api_response_time:
+        warning_max: 2.0                # API response warning (seconds)
+        critical_max: 5.0               # API response critical (seconds)
+      websocket_latency:
+        warning_max: 100                # WebSocket latency warning (ms)
+        critical_max: 500               # WebSocket latency critical (ms)
+      connection_errors:
+        warning_max: 3                  # Connection error warning count
+        critical_max: 10                # Connection error critical count
+  
+  # Legacy MT5 monitoring (fallback)
+  mt5:
+    enabled: false                      # Disabled for Linux deployment
+    connection_timeout: 10
+    ping_interval: 30
+  
+  # Trading session monitoring
+  session_monitoring:
+    enabled: true                       # Monitor trading session
+    check_market_hours: true            # Check if market is open
+    warn_outside_hours: false           # Warn when trading outside hours
+
+# Message queue monitoring
+message_queue_monitoring:
+  enabled: true                         # Enable message queue monitoring
+  queue_depth_check_interval: 60       # Check interval (seconds)
+  
+  # Queue-specific settings
+  queues:
+    trading_orders:
+      max_depth: 1000                   # Maximum queue depth
+      processing_rate_min: 10           # Minimum processing rate (msgs/sec)
+    
+    market_data:
+      max_depth: 5000                   # Maximum queue depth
+      processing_rate_min: 100          # Minimum processing rate (msgs/sec)
+
+# Linux deployment monitoring
+linux_monitoring:
+  enabled: true                         # Enable Linux-specific monitoring
+  
+  # System resource monitoring
+  system_resources:
+    enabled: true                       # Monitor system resources
+    check_interval: 30                  # Check interval (seconds)
+    
+    # Linux-specific thresholds
+    thresholds:
+      memory_usage:
+        warning_max: 80.0               # Memory warning (%)
+        critical_max: 90.0              # Memory critical (%)
+      
+      cpu_load:
+        warning_max: 2.0                # Load average warning
+        critical_max: 4.0               # Load average critical
+      
+      file_descriptors:
+        warning_max: 1000               # FD usage warning
+        critical_max: 2000              # FD usage critical
+      
+      disk_io:
+        warning_max: 80.0               # Disk I/O warning (%)
+        critical_max: 95.0              # Disk I/O critical (%)
+  
+  # Container monitoring (if applicable)
+  container_monitoring:
+    enabled: true                       # Enable container monitoring
+    check_docker_health: true          # Check Docker container health
+    monitor_resource_limits: true      # Monitor container resource limits
+    
+  # Network monitoring
+  network_monitoring:
+    enabled: true                       # Enable network monitoring
+    check_connectivity: true           # Check internet connectivity
+    monitor_bandwidth: true            # Monitor bandwidth usage
+    dns_resolution_check: true         # Check DNS resolution
+
+# Performance baselines
+baseline_settings:
+  enabled: true                         # Enable baseline tracking
+  minimum_samples: 100                  # Minimum samples for baseline
+  update_frequency_hours: 24            # Baseline update frequency
+  
+  # Anomaly detection
+  anomaly_detection:
+    enabled: true                       # Enable anomaly detection
+    sensitivity: 2.0                    # Standard deviations for anomaly
+    minimum_baseline_age_hours: 48      # Minimum baseline age for detection
+
+# Logging settings for monitoring
+logging:
+  level: "INFO"                         # Logging level
+  log_alerts: true                      # Log all alerts
+  log_metrics: false                    # Log metric recordings (verbose)
+  log_performance: true                 # Log performance statistics

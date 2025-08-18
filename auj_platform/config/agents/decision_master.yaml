@@ -1,0 +1,68 @@
+# Decision Master Agent Configuration
+# This file contains configurable parameters for the DecisionMaster agent
+
+# Consensus and confidence parameters
+min_consensus_threshold: 0.6      # Minimum consensus threshold for trade decisions
+min_confidence_threshold: 0.5     # Minimum confidence threshold for trade execution
+ai_confidence_threshold: 0.7      # AI model confidence threshold
+
+# Risk management parameters
+max_portfolio_risk: 0.02          # 2% maximum portfolio risk per trade
+risk_free_rate: 0.02              # 2% risk-free rate for calculations
+
+# AI ensemble parameters
+ensemble_training_frequency: 50   # Retrain ensemble every N decisions
+initial_decision_count: 0         # Initial decision count (auto-incremented)
+
+# Decision aggregation parameters
+agent_weight_strategy: 0.25       # Weight for StrategyExpert decisions
+agent_weight_risk: 0.20           # Weight for RiskGenius decisions
+agent_weight_execution: 0.15      # Weight for ExecutionExpert decisions
+agent_weight_pattern: 0.15        # Weight for PatternMaster decisions
+agent_weight_indicator: 0.10      # Weight for IndicatorExpert decisions
+agent_weight_microstructure: 0.05 # Weight for MicrostructureAgent decisions
+agent_weight_session: 0.05        # Weight for SessionExpert decisions
+agent_weight_simulation: 0.03     # Weight for SimulationExpert decisions
+agent_weight_pair: 0.02           # Weight for PairSpecialist decisions
+
+# Signal filtering parameters
+signal_strength_minimum: 0.4      # Minimum signal strength for consideration
+signal_convergence_bonus: 0.2     # Bonus for signal convergence across agents
+signal_divergence_penalty: -0.15  # Penalty for signal divergence
+
+# Position sizing parameters
+kelly_criterion_factor: 0.25      # Kelly criterion sizing factor (conservative)
+max_position_size_pct: 0.05       # Maximum position size as % of portfolio
+min_position_size_pct: 0.001      # Minimum position size as % of portfolio
+
+# Risk-reward parameters
+min_risk_reward_ratio: 1.5        # Minimum risk-reward ratio for trades
+optimal_risk_reward_ratio: 2.5    # Optimal risk-reward ratio target
+stop_loss_buffer_pct: 0.001       # 10 basis points buffer for stop loss
+take_profit_scaling: 1.0          # Scaling factor for take profit levels
+
+# Time-based parameters
+decision_validity_minutes: 15     # Minutes for which a decision remains valid
+max_decision_delay_seconds: 30    # Maximum delay before decision execution
+trade_timeout_minutes: 240        # Trade timeout in minutes (4 hours)
+
+# Model performance parameters
+model_performance_window: 100     # Window for model performance evaluation
+model_accuracy_threshold: 0.65    # Minimum model accuracy for continued use
+model_retrain_threshold: 0.55     # Accuracy threshold triggering retraining
+
+# Advanced decision logic parameters
+volatility_adjustment_factor: 1.2 # Factor for volatility-based adjustments
+market_regime_sensitivity: 0.8    # Sensitivity to market regime changes
+news_impact_dampening: 0.7        # Dampening factor during high-impact news
+
+# Emergency parameters
+max_consecutive_losses: 5         # Maximum consecutive losses before pause
+drawdown_halt_threshold: 0.05     # 5% drawdown threshold for trading halt
+recovery_confidence_required: 0.8 # Confidence required for recovery trades
+
+# Logging and debugging
+debug_mode: false                 # Enable detailed debug logging
+log_decision_process: true       # Log detailed decision-making process
+log_agent_weights: true          # Log individual agent weight contributions
+log_ensemble_performance: true   # Log AI ensemble performance metrics

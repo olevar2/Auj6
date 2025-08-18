@@ -1,0 +1,139 @@
+# AUJ Platform .gitignore
+# ============================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/
+auj_platform/data/
+test_performance.db
+test.db
+
+# Log files
+logs/
+*.log
+auj_platform/logs/
+
+# Environment variables
+.env
+.env.local
+.env.dev
+.env.prod
+!.env.example
+
+# Trading data and cache
+cache/
+temp/
+tmp/
+*.cache
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Secrets and sensitive data
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+config/secrets.yaml
+config/production.yaml
+
+# MT5 connection files
+*.mt5
+
+# Performance reports (large files)
+test_reports/coverage_*/
+test_reports/assets/
+
+# Backup files
+*.bak
+*.backup
+*.swp
+*.swo
+*~
+
+# Node modules (if any JS tools are used)
+node_modules/
+
+# Package files
+*.tar.gz
+*.zip
+*.rar
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+
+# Message queue data
+rabbitmq_data/

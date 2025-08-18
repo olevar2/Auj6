@@ -1,0 +1,419 @@
+# Linux Deployment Configuration for AUJ Platform
+# Optimized settings for Linux production deployment with MetaApi
+
+# Operating System Configuration
+os_config:
+  platform: "linux"
+  distribution: "ubuntu"  # ubuntu, centos, debian, alpine
+  version: "20.04"
+  architecture: "x86_64"
+
+# System Requirements
+system_requirements:
+  # Minimum requirements
+  minimum:
+    memory_gb: 2
+    cpu_cores: 2
+    disk_space_gb: 10
+    network_bandwidth_mbps: 10
+  
+  # Recommended requirements
+  recommended:
+    memory_gb: 4
+    cpu_cores: 4
+    disk_space_gb: 50
+    network_bandwidth_mbps: 100
+  
+  # Production requirements
+  production:
+    memory_gb: 8
+    cpu_cores: 8
+    disk_space_gb: 200
+    network_bandwidth_mbps: 1000
+
+# Package Dependencies
+dependencies:
+  # System packages
+  system_packages:
+    - "python3"
+    - "python3-pip"
+    - "python3-venv"
+    - "build-essential"
+    - "libssl-dev"
+    - "libffi-dev"
+    - "curl"
+    - "wget"
+    - "git"
+    - "htop"
+    - "supervisor"
+    - "nginx"
+    - "certbot"
+  
+  # Python packages (MetaApi focused)
+  python_packages:
+    - "metaapi-cloud-sdk>=27.0.0"
+    - "websockets>=11.0.0"
+    - "aiohttp>=3.8.0"
+    - "asyncio-mqtt>=0.13.0"
+    - "pandas>=2.0.0"
+    - "numpy>=1.24.0"
+    - "scipy>=1.10.0"
+    - "scikit-learn>=1.3.0"
+    - "ta-lib>=0.4.0"
+    - "fastapi>=0.104.0"
+    - "uvicorn>=0.24.0"
+    - "sqlalchemy>=2.0.0"
+    - "alembic>=1.12.0"
+    - "redis>=5.0.0"
+    - "celery>=5.3.0"
+    - "pyyaml>=6.0"
+    - "python-dotenv>=1.0.0"
+    - "psutil>=5.9.0"
+    - "prometheus-client>=0.19.0"
+
+# Service Configuration
+services:
+  # AUJ Platform Main Service
+  auj_platform:
+    name: "auj-platform"
+    description: "AUJ Trading Platform Main Service"
+    user: "auj"
+    group: "auj"
+    working_directory: "/opt/auj-platform"
+    executable: "/opt/auj-platform/venv/bin/python"
+    script: "/opt/auj-platform/main.py"
+    environment_file: "/opt/auj-platform/.env"
+    
+    # Service management
+    auto_start: true
+    auto_restart: true
+    restart_policy: "always"
+    restart_delay: 10
+    max_restart_attempts: 5
+    
+    # Resource limits
+    memory_limit: "2G"
+    cpu_limit: "2.0"
+    
+    # Logging
+    log_file: "/var/log/auj-platform/main.log"
+    error_log: "/var/log/auj-platform/error.log"
+    log_rotation: "daily"
+    log_retention_days: 30
+  
+  # MetaApi Service (dedicated)
+  metaapi_service:
+    name: "auj-metaapi"
+    description: "AUJ MetaApi Integration Service"
+    user: "auj"
+    group: "auj"
+    working_directory: "/opt/auj-platform"
+    executable: "/opt/auj-platform/venv/bin/python"
+    script: "/opt/auj-platform/services/metaapi_service.py"
+    
+    # Service dependencies
+    depends_on:
+      - "network-online.target"
+      - "redis.service"
+    
+    # Resource limits
+    memory_limit: "1G"
+    cpu_limit: "1.0"
+    
+    # Health checks
+    health_check_interval: 60
+    health_check_timeout: 30
+    health_check_retries: 3
+
+# Network Configuration
+network:
+  # Firewall settings
+  firewall:
+    enabled: true
+    default_policy: "deny"
+    
+    # Allowed ports
+    allowed_ports:
+      incoming:
+        - port: 22
+          protocol: "tcp"
+          description: "SSH"
+        - port: 80
+          protocol: "tcp"
+          description: "HTTP"
+        - port: 443
+          protocol: "tcp"
+          description: "HTTPS"
+        - port: 8000
+          protocol: "tcp"
+          description: "AUJ Platform API"
+          source: "10.0.0.0/8"  # Internal network only
+        - port: 8501
+          protocol: "tcp"
+          description: "Streamlit Dashboard"
+          source: "10.0.0.0/8"  # Internal network only
+      
+      outgoing:
+        - port: 80
+          protocol: "tcp"
+          description: "HTTP outbound"
+        - port: 443
+          protocol: "tcp"
+          description: "HTTPS outbound"
+        - port: 53
+          protocol: "udp"
+          description: "DNS"
+  
+  # SSL/TLS Configuration
+  ssl:
+    enabled: true
+    certificate_path: "/etc/ssl/certs/auj-platform.crt"
+    private_key_path: "/etc/ssl/private/auj-platform.key"
+    ca_bundle_path: "/etc/ssl/certs/ca-certificates.crt"
+    
+    # Let's Encrypt configuration
+    letsencrypt:
+      enabled: true
+      email: "admin@auj-platform.com"
+      domains:
+        - "api.auj-platform.com"
+        - "dashboard.auj-platform.com"
+      auto_renewal: true
+
+# File System Configuration
+filesystem:
+  # Directory structure
+  directories:
+    base: "/opt/auj-platform"
+    data: "/opt/auj-platform/data"
+    logs: "/var/log/auj-platform"
+    config: "/etc/auj-platform"
+    cache: "/var/cache/auj-platform"
+    tmp: "/tmp/auj-platform"
+    backups: "/opt/auj-platform/backups"
+  
+  # Permissions
+  permissions:
+    user: "auj"
+    group: "auj"
+    mode_directories: "0755"
+    mode_files: "0644"
+    mode_executables: "0755"
+    mode_config: "0600"
+  
+  # Mount points (if using separate volumes)
+  mount_points:
+    data_volume: "/opt/auj-platform/data"
+    log_volume: "/var/log/auj-platform"
+    backup_volume: "/opt/auj-platform/backups"
+
+# Environment Variables
+environment:
+  # MetaApi Configuration
+  AUJ_METAAPI_TOKEN: "${METAAPI_TOKEN}"
+  AUJ_METAAPI_ACCOUNT_ID: "${METAAPI_ACCOUNT_ID}"
+  
+  # Database Configuration
+  AUJ_DB_URL: "sqlite:///opt/auj-platform/data/auj_platform.db"
+  AUJ_DB_POOL_SIZE: "10"
+  AUJ_DB_MAX_OVERFLOW: "20"
+  
+  # Redis Configuration
+  AUJ_REDIS_URL: "redis://localhost:6379/0"
+  AUJ_REDIS_PASSWORD: "${REDIS_PASSWORD}"
+  
+  # Application Configuration
+  AUJ_CONFIG_PATH: "/etc/auj-platform/main_config.yaml"
+  AUJ_LOG_LEVEL: "INFO"
+  AUJ_DEBUG_MODE: "false"
+  AUJ_DEMO_MODE: "true"
+  
+  # Security
+  AUJ_SECRET_KEY: "${SECRET_KEY}"
+  AUJ_API_KEY: "${API_KEY}"
+  AUJ_ENCRYPTION_KEY: "${ENCRYPTION_KEY}"
+  
+  # Platform Settings
+  AUJ_PLATFORM: "linux"
+  AUJ_DEPLOYMENT_ENV: "production"
+  AUJ_CONTAINER_MODE: "false"
+
+# Security Configuration
+security:
+  # User management
+  users:
+    - name: "auj"
+      groups: ["auj", "docker"]
+      shell: "/bin/bash"
+      home: "/home/auj"
+      sudo_access: false
+  
+  # File permissions
+  secure_directories:
+    - path: "/etc/auj-platform"
+      owner: "root"
+      group: "auj"
+      mode: "0750"
+    - path: "/opt/auj-platform/data"
+      owner: "auj"
+      group: "auj"
+      mode: "0700"
+  
+  # SSH configuration
+  ssh:
+    enabled: true
+    port: 22
+    password_authentication: false
+    key_authentication: true
+    root_login: false
+    max_auth_tries: 3
+  
+  # Audit logging
+  audit:
+    enabled: true
+    log_file: "/var/log/audit/auj-platform.log"
+    rules:
+      - "-w /etc/auj-platform/ -p wa -k auj_config_changes"
+      - "-w /opt/auj-platform/ -p wa -k auj_app_changes"
+
+# Monitoring Integration
+monitoring:
+  # System monitoring
+  system:
+    tools: ["htop", "iotop", "nethogs", "dstat"]
+    
+  # Application monitoring
+  application:
+    enabled: true
+    metrics_endpoint: "http://localhost:8000/metrics"
+    health_endpoint: "http://localhost:8000/health"
+    
+  # Log monitoring
+  logging:
+    centralized: true
+    aggregator: "rsyslog"
+    remote_server: "logs.auj-platform.com"
+    
+  # Alerting
+  alerts:
+    enabled: true
+    notification_channels:
+      - email: "alerts@auj-platform.com"
+      - webhook: "https://hooks.slack.com/services/..."
+
+# Backup Configuration
+backup:
+  # Database backup
+  database:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention_days: 30
+    compression: true
+    encryption: true
+    destination: "/opt/auj-platform/backups/database"
+  
+  # Configuration backup
+  configuration:
+    enabled: true
+    schedule: "0 3 * * 0"  # Weekly on Sunday at 3 AM
+    retention_weeks: 4
+    destination: "/opt/auj-platform/backups/config"
+  
+  # Log backup
+  logs:
+    enabled: true
+    schedule: "0 4 * * 0"  # Weekly on Sunday at 4 AM
+    retention_weeks: 8
+    compression: true
+    destination: "/opt/auj-platform/backups/logs"
+
+# Performance Optimization
+performance:
+  # Kernel parameters
+  kernel_params:
+    - "net.core.somaxconn=65535"
+    - "net.ipv4.tcp_max_syn_backlog=65535"
+    - "net.core.netdev_max_backlog=5000"
+    - "vm.swappiness=10"
+    - "fs.file-max=100000"
+  
+  # System limits
+  limits:
+    - domain: "auj"
+      type: "soft"
+      item: "nofile"
+      value: "65535"
+    - domain: "auj"
+      type: "hard"
+      item: "nofile"
+      value: "65535"
+    - domain: "auj"
+      type: "soft"
+      item: "nproc"
+      value: "32768"
+    - domain: "auj"
+      type: "hard"
+      item: "nproc"
+      value: "32768"
+
+# Update and Maintenance
+maintenance:
+  # Automatic updates
+  auto_updates:
+    enabled: true
+    security_updates_only: true
+    reboot_required: false
+    schedule: "0 6 * * 1"  # Monday at 6 AM
+  
+  # Maintenance windows
+  maintenance_windows:
+    - day: "sunday"
+      start_time: "02:00"
+      end_time: "06:00"
+      timezone: "UTC"
+  
+  # Health checks
+  health_checks:
+    enabled: true
+    interval: 300  # 5 minutes
+    timeout: 30
+    retries: 3
+
+# Container Support (Optional)
+container:
+  # Docker configuration
+  docker:
+    enabled: false
+    version: "24.0.0"
+    compose_version: "2.21.0"
+    
+    # Container settings
+    settings:
+      registry: "docker.io"
+      image_name: "auj-platform"
+      tag: "latest"
+      
+      # Resource limits
+      memory_limit: "4g"
+      cpu_limit: "2.0"
+      
+      # Volumes
+      volumes:
+        - "/opt/auj-platform/data:/app/data"
+        - "/var/log/auj-platform:/app/logs"
+        - "/etc/auj-platform:/app/config:ro"
+  
+  # Kubernetes configuration (if applicable)
+  kubernetes:
+    enabled: false
+    namespace: "auj-platform"
+    replicas: 2
+    
+    # Resource requests and limits
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1000m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"

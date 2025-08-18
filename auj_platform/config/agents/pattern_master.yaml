@@ -1,0 +1,53 @@
+# Pattern Master Agent Configuration
+# This file contains configurable parameters for the PatternMaster agent
+
+# Pattern recognition parameters
+pattern_confidence_threshold: 0.7  # Minimum confidence threshold for pattern recognition
+min_pattern_confluence: 2         # Minimum number of patterns that must agree
+
+# Pattern weighting parameters
+candlestick_weight: 0.4           # Weight for candlestick pattern analysis
+chart_pattern_weight: 0.35        # Weight for chart pattern analysis
+wave_analysis_weight: 0.25        # Weight for wave analysis patterns
+
+# Candlestick pattern parameters
+reversal_pattern_strength: 0.8    # Strength threshold for reversal patterns
+continuation_pattern_strength: 0.6 # Strength threshold for continuation patterns
+doji_sensitivity: 0.1             # Sensitivity for doji pattern detection
+
+# Chart pattern parameters
+support_resistance_strength: 0.7   # Strength threshold for support/resistance levels
+breakout_confirmation_factor: 1.2  # Factor for breakout confirmation
+pattern_completion_ratio: 0.8      # Ratio for pattern completion validation
+
+# Wave analysis parameters
+elliott_wave_confidence: 0.75      # Confidence threshold for Elliott Wave patterns
+fibonacci_level_tolerance: 0.02    # Tolerance for Fibonacci level validation
+wave_degree_minimum: 3             # Minimum wave degree for analysis
+
+# Pattern formation parameters
+formation_time_minimum: 5          # Minimum periods for pattern formation
+formation_time_maximum: 50         # Maximum periods for pattern formation
+pattern_breakout_threshold: 0.002  # 20 basis points breakout threshold
+
+# Signal generation parameters
+bullish_pattern_bonus: 0.1         # Bonus confidence for bullish patterns
+bearish_pattern_bonus: 0.1         # Bonus confidence for bearish patterns
+pattern_failure_penalty: -0.2      # Penalty for pattern failures
+
+# Timeframe configuration
+primary_pattern_timeframe: "1H"    # Primary timeframe for pattern analysis
+pattern_confirmation_timeframes:   # Timeframes for pattern confirmation
+  - "1H"
+  - "4H"
+  - "1D"
+
+# Advanced pattern parameters
+harmonic_pattern_precision: 0.05   # Precision threshold for harmonic patterns
+geometric_pattern_tolerance: 0.03  # Tolerance for geometric pattern validation
+fractal_dimension_threshold: 1.5   # Threshold for fractal pattern detection
+
+# Logging and debugging
+debug_mode: false                  # Enable detailed debug logging
+log_pattern_details: true         # Log detailed pattern analysis
+log_pattern_failures: true        # Log pattern recognition failures

@@ -1,0 +1,192 @@
+# Production Conservative Configuration
+# Conservative settings for production launch to ensure stability and reliability
+# Enhanced with MetaApi support for Linux deployment
+
+# MetaApi Conservative Settings
+metaapi_settings:
+  # Connection settings
+  connection_timeout: 30
+  max_retries: 2                      # Conservative retry count
+  retry_delay: 10                     # Conservative retry delay
+  
+  # Trading settings
+  max_positions: 3                    # Very conservative position limit
+  position_timeout: 30                # Position operation timeout
+  order_timeout: 15                   # Order operation timeout
+  
+  # Data streaming
+  streaming_timeout: 60               # WebSocket timeout
+  reconnect_attempts: 3               # Conservative reconnect attempts
+  ping_interval: 30                   # Keep-alive ping interval
+  
+  # Risk management
+  max_slippage_pips: 1.0             # Strict slippage control
+  max_spread_pips: 3.0               # Conservative spread filter
+  enable_spread_filter: true         # Enable spread filtering
+
+# Linux Deployment Conservative Settings
+linux_deployment:
+  # System resource limits
+  max_memory_usage_mb: 1024          # 1GB memory limit
+  max_cpu_usage_percent: 70          # 70% CPU limit
+  max_file_descriptors: 1024         # File descriptor limit
+  
+  # Process management
+  worker_processes: 2                # Conservative worker count
+  worker_timeout: 30                 # Worker timeout
+  graceful_shutdown_timeout: 60      # Graceful shutdown time
+  
+  # Network settings
+  connection_pool_size: 5            # Small connection pool
+  socket_timeout: 30                 # Socket timeout
+  keepalive_timeout: 60              # Keep-alive timeout
+
+performance_settings:
+  # Conservative settings for production launch
+  max_indicators_per_regime: 10
+  cache_duration_minutes: 10
+  execution_timeout_seconds: 2
+  ml_complexity_level: "medium"
+
+  # Concurrency limits
+  max_concurrent_calculations: 8
+  thread_pool_size: 8
+
+  # Memory management
+  max_cache_size: 800
+  cache_cleanup_interval: 300  # 5 minutes
+
+  # Monitoring thresholds
+  performance_alert_threshold: 1.5  # seconds
+  memory_usage_alert: 85  # percent
+  cpu_usage_alert: 80     # percent
+
+selective_indicator_engine:
+  max_indicators_per_regime: 10
+  min_validation_trades: 25
+  correlation_threshold: 0.75
+  stability_threshold: 0.65
+
+  # Conservative selection weights
+  selection_weights:
+    out_of_sample_performance: 0.40
+    risk_adjusted_returns: 0.25
+    stability_score: 0.25
+    regime_specificity: 0.05
+    correlation_diversity: 0.03
+    recent_performance: 0.02
+
+ml_settings:
+  complexity_level: "medium"
+  ensemble_size: 3        # instead of 5
+  max_features: 15        # instead of 20
+  training_samples: 200   # instead of 300
+  validation_split: 0.3
+
+  # Advanced ML Engine Conservative Settings
+  n_estimators: 75
+  max_depth: 8
+  hidden_layer_sizes: [75, 40]
+  retrain_frequency: 200
+  uncertainty_threshold: 0.3
+
+data_caching:
+  default_expiry_minutes: 10
+  max_cache_entries: 800
+  cleanup_frequency: 300
+
+execution_settings:
+  timeout_seconds: 2
+  retry_attempts: 2
+  batch_size: 8
+  concurrent_limit: 8
+
+# Risk Management Settings - Balanced for Production
+risk_management:
+  conservative_mode: true
+  position_sizing_conservative: false  # Allow normal position sizing
+  max_daily_risk: 0.03  # 3% max daily risk - balanced for opportunities
+  max_trade_risk: 0.015  # 1.5% max risk per trade - allows meaningful positions
+  max_portfolio_risk: 0.20  # 20% max portfolio risk
+  stop_loss_percentage: 0.02  # 2% stop loss
+  take_profit_ratio: 2.5  # 2.5:1 reward to risk ratio
+  max_open_positions: 5  # Allow up to 5 concurrent positions
+
+# Monitoring and Alerts
+monitoring:
+  enable_performance_alerts: true
+  enable_memory_monitoring: true
+  enable_timeout_monitoring: true
+  log_level: "INFO"
+
+  # Alert thresholds
+  max_execution_time: 2.0
+  max_memory_usage: 85
+  max_cpu_usage: 80
+
+# Agent Configuration
+agent_settings:
+  max_agents_active: 8  # Conservative number of active agents
+  agent_timeout: 30     # 30 second timeout for agent operations
+
+# Database Settings
+database:
+  connection_pool_size: 5  # Conservative pool size
+  query_timeout: 10        # 10 second query timeout
+  batch_size: 100         # Conservative batch size
+
+# Network Settings
+network:
+  request_timeout: 15     # 15 second timeout
+  max_retries: 2         # Conservative retry count
+  connection_pool_size: 10
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  max_file_size: "50MB"
+  backup_count: 5
+  performance_logging: true
+
+# Provider Configuration - Conservative
+provider_settings:
+  # MetaApi Provider (Primary)
+  metaapi:
+    enabled: true
+    timeout: 30
+    max_retries: 2
+    batch_size: 10               # Small batch size
+    rate_limit_per_second: 5     # Conservative rate limiting
+    
+  # Legacy MT5 Provider (DEPRECATED - Migration completed)
+  # Use MetaApi provider for all deployments
+  mt5:
+    enabled: false               # DEPRECATED: Migration to MetaApi completed
+    deprecated: true             # Mark as deprecated
+    migration_completed: true    # Migration status
+    # timeout: 20               # Reference only
+    # max_retries: 2            # Reference only
+    
+  # Yahoo Finance Provider (Backup)
+  yahoo:
+    enabled: true
+    timeout: 20
+    max_retries: 2
+    cache_duration: 300          # 5 minute cache
+
+# Feature Flags
+features:
+  advanced_ml_enabled: true
+  regime_detection_enabled: true
+  real_time_monitoring: true
+  conservative_mode: true
+  metaapi_enabled: true          # Enable MetaApi
+  linux_optimized: true         # Enable Linux optimizations
+  mt5_direct_disabled: true     # Disable MT5 direct connection
+
+# Environment Specific Settings
+environment:
+  name: "production_conservative"
+  mode: "conservative"
+  debug: false
+  testing: false

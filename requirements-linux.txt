@@ -1,0 +1,37 @@
+# AUJ Platform Linux Requirements
+# Essential packages for MetaApi integration on Linux
+
+# MetaApi SDK - Core requirement for Linux deployment
+metaapi-cloud-sdk>=27.0.0
+
+# WebSocket support for real-time data streaming
+websockets>=11.0.0
+websocket-client>=1.6.0
+
+# HTTP client for API calls
+aiohttp>=3.8.0
+requests>=2.31.0
+
+# Core data science packages
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Financial data analysis
+ta-lib>=0.4.0
+
+# Configuration management
+PyYAML>=6.0.0
+python-dotenv>=1.0.0
+
+# Async support
+asyncio>=3.4.3
+
+# Database
+SQLAlchemy>=2.0.0
+
+# Logging and monitoring
+psutil>=5.9.0
+
+# Essential utilities
+python-dateutil>=2.8.2
+pytz>=2023.3

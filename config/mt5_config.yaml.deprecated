@@ -1,0 +1,112 @@
+# MT5 Broker Configuration for AUJ Platform (LEGACY - Windows Only)
+# Demo Account Credentials for RoboForex-Pro
+# 
+# NOTICE: This configuration is deprecated for Linux deployment
+# Use MetaApi provider instead for cross-platform compatibility
+# This file is maintained only for Windows fallback scenarios
+
+# Deployment Status
+deployment_status:
+  deprecated: true
+  replacement: "metaapi_config.yaml"
+  supported_platforms: ["windows"]
+  disabled_platforms: ["linux", "darwin"]
+  migration_guide: "docs/metaapi_migration.md"
+
+# Connection Parameters
+connection:
+  login: 68238986
+  password: ""  # Set via environment variable AUJ_MT5_PASSWORD
+  server: "RoboForex-Pro"
+  timeout: 30
+  max_retries: 3
+  retry_delay: 5
+
+# Account Information
+account:
+  type: "Demo Pro"
+  base_currency: "USD"
+  leverage: 1000
+  description: "MT5 Demo Pro Account for AUJ Platform Development"
+
+# Trading Parameters
+trading:
+  deviation: 20              # Maximum price deviation in points
+  magic_number: 123456       # Magic number for identifying AUJ platform orders
+  default_volume: 0.1        # Default trading volume
+  min_volume: 0.01          # Minimum trading volume
+  max_volume: 100.0         # Maximum trading volume
+  volume_step: 0.01         # Volume step
+
+# Risk Management
+risk:
+  max_slippage_points: 50    # Maximum allowed slippage in points
+  order_timeout_seconds: 30  # Order execution timeout
+  max_spread_points: 30      # Maximum allowed spread in points
+  max_positions: 50          # Maximum number of open positions
+
+# Supported Symbols
+symbols:
+  major_pairs:
+    - "EURUSD"
+    - "GBPUSD" 
+    - "USDJPY"
+    - "USDCHF"
+    - "AUDUSD"
+    - "USDCAD"
+    - "NZDUSD"
+    
+  minor_pairs:
+    - "EURGBP"
+    - "EURJPY"
+    - "GBPJPY"
+    - "EURAUD"
+    - "EURCHF"
+    - "GBPCHF"
+    - "AUDCHF"
+    - "AUDJPY"
+    - "CADJPY"
+    - "CHFJPY"
+    - "EURAUD"
+    - "GBPAUD"
+    - "AUDNZD"
+
+  metals:
+    - "XAUUSD"  # Gold
+    - "XAGUSD"  # Silver
+
+# Data Streaming Settings
+streaming:
+  enabled: true
+  tick_frequency_ms: 1000    # Tick data frequency in milliseconds
+  price_update_interval: 1   # Price update interval in seconds
+  max_ticks_per_request: 10000
+  historical_data_limit: 50000
+
+# Market Hours (UTC)
+market_hours:
+  forex:
+    sunday_open: "22:00"
+    friday_close: "22:00"
+  
+# Error Handling
+error_handling:
+  log_all_errors: true
+  max_connection_attempts: 5
+  connection_retry_delay: 10
+  auto_reconnect: true
+  fallback_to_demo: true
+
+# Performance Settings
+performance:
+  connection_pool_size: 5
+  max_concurrent_requests: 10
+  request_timeout: 30
+  keep_alive_interval: 60
+
+# Logging
+logging:
+  level: "INFO"
+  log_trades: true
+  log_market_data: false  # Set to true only for debugging
+  log_connection_events: true

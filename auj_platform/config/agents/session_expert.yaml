@@ -1,0 +1,52 @@
+# Session Expert Agent Configuration
+# This file contains configurable parameters for the SessionExpert agent
+
+# Session analysis parameters
+session_overlap_bonus: 0.2        # Confidence bonus during session overlaps
+opening_range_minutes: 30         # Minutes for opening range calculation
+
+# Trading session parameters
+asian_session_start: "22:00"      # Asian session start time (UTC)
+asian_session_end: "07:00"        # Asian session end time (UTC)
+london_session_start: "07:00"     # London session start time (UTC)
+london_session_end: "16:00"       # London session end time (UTC)
+ny_session_start: "13:00"         # New York session start time (UTC)
+ny_session_end: "22:00"           # New York session end time (UTC)
+
+# Session volatility parameters
+asian_volatility_multiplier: 0.6  # Volatility multiplier for Asian session
+london_volatility_multiplier: 1.2 # Volatility multiplier for London session
+ny_volatility_multiplier: 1.0     # Volatility multiplier for NY session
+overlap_volatility_boost: 1.5     # Volatility boost during session overlaps
+
+# Opening range breakout parameters
+opening_range_breakout_threshold: 0.001  # 10 basis points breakout threshold
+opening_range_volume_multiplier: 1.5     # Volume multiplier for valid breakouts
+breakout_confirmation_period: 15         # Minutes for breakout confirmation
+
+# Session momentum parameters
+session_momentum_threshold: 0.6   # Threshold for session momentum detection
+momentum_decay_factor: 0.9        # Factor for momentum decay over time
+session_bias_strength: 0.8        # Strength threshold for session bias
+
+# Economic news impact parameters
+news_impact_window: 30            # Minutes before/after news for impact assessment
+high_impact_multiplier: 2.0       # Multiplier for high impact news events
+medium_impact_multiplier: 1.5     # Multiplier for medium impact news events
+
+# Weekend and holiday parameters
+weekend_volatility_reduction: 0.3 # Volatility reduction factor for weekends
+holiday_volatility_reduction: 0.5 # Volatility reduction factor for holidays
+
+# Carry trade parameters
+carry_interest_threshold: 0.02    # Minimum interest rate differential for carry trades
+carry_trade_session_bias: 0.1     # Session bias adjustment for carry trades
+
+# Time zone configuration
+market_timezone: "UTC"            # Market timezone for session calculations
+daylight_saving_adjustment: true  # Adjust for daylight saving time changes
+
+# Logging and debugging
+debug_mode: false                 # Enable detailed debug logging
+log_session_transitions: true    # Log session transition details
+log_opening_range_analysis: true # Log opening range analysis

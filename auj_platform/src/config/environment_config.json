@@ -1,0 +1,39 @@
+{
+  "platform": {
+    "name": "AUJ Platform",
+    "version": "1.0.0",
+    "root_path": "E:\\AUJ\\auj_platform\\src",
+    "src_path": "E:\\AUJ\\auj_platform\\src\\auj_platform\\src",
+    "config_path": "E:\\AUJ\\auj_platform\\src\\config",
+    "logs_path": "E:\\AUJ\\auj_platform\\src\\logs"
+  },
+  "paths": {
+    "python_path": [
+      "E:\\AUJ\\auj_platform\\src",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\core",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\agents",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\coordination",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\trading_engine",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\broker_interfaces",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\data_providers",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\analytics",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\monitoring",
+      "E:\\AUJ\\auj_platform\\src\\auj_platform\\src\\api"
+    ]
+  },
+  "environment_variables": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    "AUJ_PLATFORM_ROOT": "E:\\AUJ\\auj_platform\\src",
+    "AUJ_SRC_PATH": "E:\\AUJ\\auj_platform\\src\\auj_platform\\src",
+    "AUJ_CONFIG_PATH": "E:\\AUJ\\auj_platform\\src\\config",
+    "AUJ_LOGS_PATH": "E:\\AUJ\\auj_platform\\src\\logs"
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "E:\\AUJ\\auj_platform\\src\\logs\\auj_platform.log"
+  }
+}

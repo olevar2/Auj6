@@ -1,0 +1,32 @@
+# requirements.lock - Locked versions for reproducible builds
+# Generated automatically - do not edit manually
+# Use: pip-tools compile pyproject.toml --output-file requirements.lock
+
+# This file ensures reproducible builds across different environments
+# Run the following command to generate this file:
+# pip install pip-tools
+# pip-compile pyproject.toml --output-file requirements.lock
+
+# To update dependencies:
+# pip-compile --upgrade pyproject.toml --output-file requirements.lock
+
+# To install exact versions:
+# pip install -r requirements.lock
+
+# Note: This file should be generated automatically by CI/CD pipeline
+# For manual generation, run:
+# pip-compile --generate-hashes pyproject.toml --output-file requirements.lock
+
+# Core MetaApi dependencies with exact versions will be here
+# Example format:
+# metaapi-cloud-sdk==27.0.1 \
+#     --hash=sha256:abcd1234...
+# websockets==11.0.2 \
+#     --hash=sha256:efgh5678...
+
+# To regenerate this file:
+# 1. Install pip-tools: pip install pip-tools
+# 2. Compile: pip-compile pyproject.toml --output-file requirements.lock
+# 3. For hashes: pip-compile --generate-hashes pyproject.toml --output-file requirements.lock
+
+# This file will be auto-generated during build process

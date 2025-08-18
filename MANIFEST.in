@@ -1,0 +1,98 @@
+# AUJ Platform Manifest - Enhanced for Linux Deployment with MetaApi
+
+# Core project files
+include README.md
+include LICENSE
+include pyproject.toml
+include MANIFEST.in
+
+# Requirements files
+include requirements*.txt
+include pip.conf
+
+# Configuration files (all locations)
+recursive-include config *.yaml *.yml *.json *.conf *.template
+include config/.env.template
+recursive-include auj_platform/config *.yaml *.yml *.json *.conf
+recursive-include auj_platform/dashboard/config *.yaml *.yml
+
+# Source code
+recursive-include auj_platform *.py *.pyx *.pxd
+recursive-include auj_platform/src *.py
+recursive-include auj_platform/core *.py
+recursive-include auj_platform/dashboard *.py
+recursive-include auj_platform/data *.py
+recursive-include auj_platform/scripts *.py
+
+# Web assets for dashboard
+recursive-include auj_platform/dashboard *.html *.css *.js
+recursive-include auj_platform *.html *.css *.js
+
+# Configuration and data files
+recursive-include auj_platform *.yaml *.yml *.json *.conf *.txt *.md
+
+# Documentation
+recursive-include docs *.md *.rst *.txt *.png *.jpg *.svg
+include docs/Makefile
+
+# Scripts and deployment tools
+include scripts/*.py
+include scripts/*.sh
+include scripts/*.bat
+include scripts/*.ps1
+
+# Linux deployment specific
+include setup_environment.sh
+include install_economic_calendar.sh
+include requirements-linux.txt
+include requirements-dev.txt
+
+# Docker and containerization
+include Dockerfile*
+include docker-compose*.yml
+include .dockerignore
+recursive-include docker *.yml *.yaml *.conf *.sh
+
+# Package setup and build
+include setup.py
+
+# Models and data (if any)
+recursive-include models *.pkl *.joblib *.json *.yaml
+recursive-include data *.csv *.json *.yaml
+
+# Test files (include test data, exclude results)
+recursive-include tests *.py *.yaml *.json *.txt
+recursive-exclude tests *.pyc
+recursive-exclude tests __pycache__
+recursive-exclude tests .pytest_cache
+
+# Exclude development and build artifacts
+exclude .env
+exclude .env.*
+exclude secrets.*
+exclude *.key *.pem *.crt
+recursive-exclude . __pycache__
+recursive-exclude . *.py[co]
+recursive-exclude . *.so
+recursive-exclude . .git*
+recursive-exclude . .pytest_cache
+recursive-exclude . .coverage
+recursive-exclude . htmlcov
+recursive-exclude . .tox
+recursive-exclude . .mypy_cache
+recursive-exclude . .idea
+recursive-exclude . .vscode
+recursive-exclude . .DS_Store
+exclude .pre-commit-config.yaml
+
+# Exclude log files and temporary data
+recursive-exclude . *.log
+recursive-exclude . *.tmp
+recursive-exclude . *.cache
+recursive-exclude logs *
+recursive-exclude backups *
+
+# Include version and metadata
+include VERSION
+include AUTHORS
+include CHANGELOG.md

@@ -1,0 +1,18 @@
+{
+  "folders": [
+    {
+      "name": "AUJ Platform",
+      "path": "."
+    }
+  ],
+  "settings": {
+    // Inherit from .vscode/settings.json
+  },
+  "extensions": {
+    "recommendations": [
+      "github.copilot",
+      "github.copilot-chat",
+      "ms-python.python"
+    ]
+  }
+}

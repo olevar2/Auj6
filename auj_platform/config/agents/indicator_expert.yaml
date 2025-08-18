@@ -1,0 +1,68 @@
+# Indicator Expert Agent Configuration
+# This file contains configurable parameters for the IndicatorExpert agent
+
+# RSI parameters
+rsi_overbought: 70                # RSI overbought threshold
+rsi_oversold: 30                  # RSI oversold threshold
+
+# Stochastic parameters
+stoch_overbought: 80              # Stochastic overbought threshold
+stoch_oversold: 20                # Stochastic oversold threshold
+
+# Signal strength parameters
+strong_signal_threshold: 0.7      # Threshold for strong signal classification
+weak_signal_threshold: 0.3        # Threshold for weak signal classification
+
+# Moving average parameters
+ma_fast_period: 12                # Fast moving average period
+ma_slow_period: 26                # Slow moving average period
+ma_signal_period: 9               # Signal line moving average period
+
+# MACD parameters
+macd_fast_ema: 12                 # MACD fast EMA period
+macd_slow_ema: 26                 # MACD slow EMA period
+macd_signal_ema: 9                # MACD signal EMA period
+macd_divergence_threshold: 0.001  # MACD divergence detection threshold
+
+# Bollinger Bands parameters
+bb_period: 20                     # Bollinger Bands period
+bb_std_dev: 2.0                   # Bollinger Bands standard deviation multiplier
+bb_squeeze_threshold: 0.1         # Threshold for Bollinger Band squeeze detection
+
+# ADX parameters
+adx_period: 14                    # ADX calculation period
+adx_trend_threshold: 25           # ADX trend strength threshold
+adx_strong_trend: 40              # ADX strong trend threshold
+
+# Volume indicators parameters
+volume_sma_period: 20             # Volume SMA period
+volume_spike_multiplier: 2.0      # Volume spike detection multiplier
+on_balance_volume_threshold: 1000 # OBV significance threshold
+
+# Momentum indicators parameters
+momentum_period: 10               # Momentum calculation period
+roc_period: 12                    # Rate of Change period
+williams_r_period: 14             # Williams %R period
+
+# Signal aggregation parameters
+indicator_weight_momentum: 0.3    # Weight for momentum indicators
+indicator_weight_trend: 0.4       # Weight for trend indicators
+indicator_weight_volume: 0.2      # Weight for volume indicators
+indicator_weight_volatility: 0.1  # Weight for volatility indicators
+
+# Confidence calculation parameters
+max_confidence_boost: 0.2         # Maximum confidence boost for strong signals
+min_confidence_penalty: -0.1      # Minimum confidence penalty for weak signals
+signal_convergence_bonus: 0.15    # Bonus for signal convergence
+
+# Timeframe configuration
+primary_analysis_timeframe: "1H"  # Primary timeframe for indicator analysis
+multi_timeframe_analysis:         # Additional timeframes for analysis
+  - "15M"
+  - "1H"
+  - "4H"
+
+# Logging and debugging
+debug_mode: false                 # Enable detailed debug logging
+log_indicator_values: true       # Log individual indicator values
+log_signal_calculations: true    # Log signal calculation details

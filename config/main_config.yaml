@@ -1,0 +1,582 @@
+# AUJ Platform Main Configuration
+# Production-ready configuration for the AUJ Trading Platform
+
+# Debug Mode (Production setting)
+debug: false
+
+# Environment Variables Configuration
+environment_variables:
+  # MetaApi Configuration
+  metaapi:
+    token: "AUJ_METAAPI_TOKEN"           # MetaApi API token
+    account_id: "AUJ_METAAPI_ACCOUNT_ID" # MetaApi account ID
+    
+  # Legacy MT5 Configuration (DEPRECATED - Windows only)
+  # MIGRATION NOTE: Use MetaApi for cross-platform deployment
+  # This section will be removed in future versions
+  mt5:
+    enabled: false              # DEPRECATED: Use metaapi instead
+    deprecated: true            # Mark as deprecated
+    migration_notice: "Use brokers.metaapi configuration for Linux deployment"
+    # password: "AUJ_MT5_PASSWORD"  # Commented out - not needed for Linux
+    
+  # Database Configuration
+  database:
+    user: "AUJ_DB_USER"                  # Database username
+    password: "AUJ_DB_PASS"              # Database password
+    
+  # Security
+  security:
+    encryption_key: "AUJ_ENCRYPTION_KEY" # Encryption key
+    api_key: "AUJ_API_KEY"               # Platform API key
+    
+  # Message Broker
+  rabbitmq:
+    password: "AUJ_RABBITMQ_PASSWORD"    # RabbitMQ password
+    
+  # Caching
+  redis:
+    password: "AUJ_REDIS_PASSWORD"       # Redis password
+
+# Database Configuration
+database:
+  url: "sqlite:///data/auj_platform.db"
+  host: "localhost"
+  port: 5432
+  name: "auj_platform"
+  username: ""  # Set via environment variable AUJ_DB_USER
+  password: ""  # Set via environment variable AUJ_DB_PASS
+
+# Logging Configuration (both formats for compatibility)
+logging_settings:
+  level: "INFO"
+  enable_console: true
+  enable_file: true
+  log_dir: "logs"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+
+logging:
+  level: "INFO"
+  enable_console: true
+  enable_file: true
+  log_dir: "logs"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+
+# Risk Management Parameters
+risk_parameters:
+  max_position_size: 10000           # Maximum position size in base currency
+  max_daily_loss: 1000               # Maximum daily loss in base currency
+  max_position_size_percent: 2.0     # Maximum 2% of account per position
+  max_daily_loss_percent: 5.0        # Maximum 5% daily loss
+  stop_loss_percent: 2.0             # Default 2% stop loss
+  take_profit_percent: 4.0           # Default 4% take profit
+  max_positions: 10                  # Maximum concurrent positions
+  risk_per_trade: 0.02               # 2% risk per trade
+  max_correlation: 0.7               # Maximum position correlation
+
+# Platform Settings
+platform_settings:
+  demo_mode: true                    # Start in demo mode for safety
+  enable_live_trading: false         # Disabled by default for safety
+  analysis_interval_minutes: 60      # Analysis every hour
+  default_timeframe: "1H"            # Default 1-hour timeframe
+  max_agents_active: 10              # Maximum active agents
+  agent_rotation_hours: 24           # Agent performance evaluation period
+
+  # Linux Deployment Settings (Migration Completed)
+  linux_deployment:
+    enabled: true                    # Enable Linux-specific optimizations
+    preferred_provider: "metaapi"    # Primary provider (migration completed)
+    fallback_provider: "yahoo"       # Fallback to Yahoo Finance
+    mt5_migration_completed: true    # MT5 to MetaApi migration completed
+    container_optimized: true        # Optimize for containerized deployment
+    
+  # Cross-Platform Provider Priority (Updated for MetaApi migration)
+  provider_priority:
+    linux:
+      - "metaapi"              # Primary for Linux deployment
+      - "yahoo"
+      - "binance"
+    windows:
+      - "metaapi"              # Preferred over MT5 for consistency
+      - "yahoo"
+      - "binance"
+      # "mt5" removed - use metaapi for cross-platform consistency
+    darwin:  # macOS
+      - "metaapi"              # Primary for macOS
+      - "yahoo"
+      - "binance"
+
+  # Supported trading pairs (25 assets)
+  supported_symbols:
+    - "EURUSD"
+    - "GBPUSD"
+    - "USDJPY"
+    - "AUDUSD"
+    - "USDCAD"
+    - "NZDUSD"
+    - "USDCHF"
+    - "EURGBP"
+    - "EURJPY"
+    - "GBPJPY"
+    - "GOLD"
+    - "SILVER"
+    - "OIL"
+    - "BTCUSD"
+    - "ETHUSD"
+    - "SPX500"
+    - "NAS100"
+    - "GER40"
+    - "UK100"
+    - "FRA40"
+    - "JPN225"
+    - "AUS200"
+    - "HKG33"
+    - "TSLA"
+    - "AAPL"
+
+# Data Provider Configuration
+data_providers:
+  # MetaApi Provider (Primary for Linux deployment)
+  metaapi:
+    enabled: true
+    token: ""                   # Set via environment variable AUJ_METAAPI_TOKEN
+    account_id: ""              # Set via environment variable AUJ_METAAPI_ACCOUNT_ID
+    timeout: 30
+    application: "AUJ-Platform"
+    domain: "auj-platform.com"
+    deployment_environment: "production"
+    region: "new-york"
+    priority: 1                 # Highest priority for Linux
+
+  # MT5 Provider (DEPRECATED - Migration to MetaApi completed)
+  # This configuration is kept for reference only
+  # All functionality moved to metaapi provider above
+  mt5:
+    enabled: false              # DEPRECATED: Disabled on all platforms
+    deprecated: true            # Migration to MetaApi completed
+    migration_status: "completed"
+    replacement: "brokers.metaapi"
+    # All settings below are disabled for Linux deployment
+    # login: 68238986           # Moved to MetaApi account configuration
+    # password: ""              # Use MetaApi token instead
+    # server: "RoboForex-Pro"   # MetaApi handles server connection
+    timeout: 30                 # Kept for reference
+    deviation: 20               # Kept for reference  
+    magic_number: 123456        # Moved to MetaApi configuration
+    type: "Demo Pro"            # Account type reference
+    priority: 99                # Lowest priority (effectively disabled)
+
+  yahoo:
+    enabled: true
+    timeout: 30
+    priority: 3
+    # Note: Uses free yfinance library - no API key required
+
+  binance:
+    enabled: false
+    api_key: ""
+    api_secret: ""
+    testnet: true
+    priority: 4
+
+  # Economic Calendar Configuration
+  economic_calendar:
+    enabled: true
+    primary_source: "forexfactory"    # Primary data source
+    backup_sources: ["investing"]     # Backup sources in order of priority
+    request_timeout: 30               # Request timeout in seconds
+    cache_duration: 60                # Cache duration in minutes
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+
+    # API Keys for authenticated sources (optional)
+    api_keys:
+      tradingeconomics: ""            # Set via environment variable AUJ_TRADINGECONOMICS_API_KEY
+      custom: ""                      # Set via environment variable AUJ_CUSTOM_ECONOMIC_API_KEY
+
+    # Default filters
+    default_filters:
+      currencies: ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD"]
+      impact_levels: ["HIGH", "MEDIUM", "CRITICAL"]
+      max_events_per_request: 100
+
+    # Custom API configuration (if using custom source)
+    custom_api:
+      url: ""                         # Custom API base URL
+      endpoint: "/calendar"           # Custom API endpoint
+      authentication_type: "bearer"   # "bearer", "api_key", or "basic"
+
+  # Enhanced News Provider Configuration
+  news:
+    enabled: true                     # Enable news analysis (placeholder for future)
+    sentiment_analysis: true          # Enable sentiment analysis
+    financial_keyword_filtering: true # Filter for financial keywords
+    cache_duration: 30                # Cache duration in minutes
+
+# Agent Hierarchy Configuration
+hierarchy:
+  evaluation_period_hours: 24
+  promotion_threshold: 0.8          # Win rate threshold for promotion
+  demotion_threshold: 0.4           # Win rate threshold for demotion
+  alpha_rotation_days: 7            # Alpha agent rotation period
+
+  # Agent pool configuration
+  agents:
+    - name: "StrategyExpert"
+      specialization: "strategy_coordination"
+      initial_rank: "ALPHA"
+
+    - name: "RiskGenius"
+      specialization: "risk_management"
+      initial_rank: "ALPHA"
+
+    - name: "PatternMaster"
+      specialization: "pattern_recognition"
+      initial_rank: "BETA"
+
+    - name: "PairSpecialist"
+      specialization: "pair_analysis"
+      initial_rank: "BETA"
+
+    - name: "SessionExpert"
+      specialization: "session_analysis"
+      initial_rank: "BETA"
+
+    - name: "IndicatorExpert"
+      specialization: "indicator_analysis"
+      initial_rank: "GAMMA"
+
+    - name: "ExecutionExpert"
+      specialization: "execution_optimization"
+      initial_rank: "GAMMA"
+
+    - name: "DecisionMaster"
+      specialization: "decision_synthesis"
+      initial_rank: "GAMMA"
+
+    - name: "MicrostructureAgent"
+      specialization: "microstructure_analysis"
+      initial_rank: "GAMMA"
+
+    - name: "SimulationExpert"
+      specialization: "simulation_validation"
+      initial_rank: "GAMMA"
+
+# API Configuration
+api_settings:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins:
+    - "http://localhost:8501"  # Streamlit dashboard
+    - "http://127.0.0.1:8501"
+
+# Trading Session Configuration
+trading_sessions:
+  sydney:
+    start: "22:00"
+    end: "07:00"
+    timezone: "UTC"
+
+  tokyo:
+    start: "00:00"
+    end: "09:00"
+    timezone: "UTC"
+
+  london:
+    start: "08:00"
+    end: "17:00"
+    timezone: "UTC"
+
+  new_york:
+    start: "13:00"
+    end: "22:00"
+    timezone: "UTC"
+
+# Performance and Optimization
+optimization:
+  # Feature flags for A/B testing
+  feature_flags:
+    enable_ml_filtering: true
+    enable_ensemble_decisions: true
+    enable_dynamic_risk: true
+    enable_sentiment_analysis: true          # NOW ENABLED for economic calendar
+    enable_news_integration: true            # NOW ENABLED for economic calendar
+    enable_economic_calendar: true           # NEW: Enable economic calendar
+    enable_economic_event_signals: true      # NEW: Generate signals from economic events
+    enable_event_correlation_analysis: true  # NEW: Analyze event correlations
+
+  # Selective indicator usage by market regime
+  selective_indicators:
+    trending:
+      - "moving_averages"
+      - "macd"
+      - "adx"
+      - "bollinger_bands"
+
+    sideways:
+      - "rsi"
+      - "stochastic"
+      - "williams_r"
+      - "cci"
+
+    volatile:
+      - "atr"
+      - "volatility_bands"
+      - "keltner_channels"
+
+  # Performance thresholds
+  performance_thresholds:
+    min_win_rate: 0.55
+    min_profit_factor: 1.3
+    max_drawdown: 0.15
+    min_sharpe_ratio: 1.0
+
+# Coordination Performance Optimization
+coordination:
+  # Performance Optimization Settings
+  enable_parallel_analysis: true
+  max_analysis_time_seconds: 120           # Reduced from 300 to 120
+  max_concurrent_agents: 3
+
+  # Phase Optimization
+  enable_phase_merging: true
+  enable_incremental_indicators: true
+
+  # Existing settings (enhanced)
+  analysis_frequency_minutes: 60
+  minimum_confidence_threshold: 0.6
+  consensus_threshold: 0.6
+  elite_set_update_hours: 24
+  
+  # Additional settings for optimization
+  primary_symbol: "EURUSD"
+  primary_timeframe: "1H"
+  indicator_periods: 100
+
+# Notification Settings (for future implementation)
+notifications:
+  email:
+    enabled: false
+    smtp_server: ""
+    smtp_port: 587
+    username: ""
+    password: ""
+
+  discord:
+    enabled: false
+    webhook_url: ""
+
+  telegram:
+    enabled: false
+    bot_token: ""
+    chat_id: ""
+
+# Message Broker Configuration (RabbitMQ)
+message_broker:
+  enabled: true
+  host: "localhost"
+  port: 5672
+  username: "auj_user"
+  password: ""  # Set via environment variable AUJ_RABBITMQ_PASSWORD
+  vhost: "/auj"
+  ssl_enabled: false
+
+  # Connection pool settings
+  max_connections: 10
+  max_channels: 50
+  heartbeat: 600
+  connection_attempts: 5
+  retry_delay: 2
+  prefetch_count: 100
+
+  # Queue configurations
+  queues:
+    trading_signals_high:
+      name: "auj.trading.signals.high"
+      ttl_ms: 300000  # 5 minutes
+      max_priority: 10
+
+    trading_signals_normal:
+      name: "auj.trading.signals.normal"
+      ttl_ms: 600000  # 10 minutes
+      max_priority: 5
+
+    coordination_consensus:
+      name: "auj.coordination.consensus"
+      ttl_ms: 60000   # 1 minute
+
+    risk_alerts:
+      name: "auj.risk.alerts"
+      ttl_ms: 1800000 # 30 minutes
+      max_priority: 10
+
+# Docker Configuration
+docker:
+  enabled: true
+  network_name: "auj_network"
+
+  # Service configurations
+  services:
+    postgres:
+      image: "postgres:15-alpine"
+      port: 5432
+      environment:
+        - "POSTGRES_DB=auj_platform"
+        - "POSTGRES_USER=auj_user"
+        - "POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password"
+
+    rabbitmq:
+      image: "rabbitmq:3-management-alpine"
+      port: 5672
+      management_port: 15672
+      environment:
+        - "RABBITMQ_DEFAULT_USER=auj_user"
+        - "RABBITMQ_DEFAULT_PASS_FILE=/run/secrets/rabbitmq_password"
+        - "RABBITMQ_DEFAULT_VHOST=/auj"
+
+    redis:
+      image: "redis:7-alpine"
+      port: 6379
+
+    prometheus:
+      image: "prom/prometheus:latest"
+      port: 9090
+
+    grafana:
+      image: "grafana/grafana:latest"
+      port: 3000
+
+# Feature Flags for Production Deployment
+feature_flags:
+  enable_messaging_system: true
+  enable_docker_metrics: true
+  enable_health_monitoring: true
+  enable_performance_optimization: true
+  enable_ci_cd_integration: true
+  enable_ml_filtering: true
+  enable_ensemble_decisions: true
+  enable_dynamic_risk: true
+  enable_sentiment_analysis: true          # NOW ENABLED for economic calendar
+  enable_news_integration: true            # NOW ENABLED for economic calendar
+  enable_economic_calendar: true           # NEW: Enable economic calendar
+  enable_economic_event_signals: true      # NEW: Generate signals from economic events
+  enable_event_correlation_analysis: true  # NEW: Analyze event correlations
+  
+  # MetaApi-specific features
+  enable_metaapi_provider: true            # Enable MetaApi integration
+  enable_metaapi_streaming: true           # Enable MetaApi WebSocket streaming
+  enable_metaapi_trading: true             # Enable MetaApi trading operations
+  enable_cross_platform_deployment: true  # Enable cross-platform deployment
+  enable_linux_optimization: true         # Enable Linux-specific optimizations
+  enable_mt5_direct_fallback: false       # Disable MT5 direct fallback on Linux
+
+# CI/CD Configuration
+ci_cd:
+  enabled: true
+
+  # GitHub Actions settings
+  github:
+    workflows_enabled: true
+    auto_deploy_staging: true
+    auto_deploy_production: false  # Manual approval required
+
+  # Testing configuration
+  testing:
+    unit_tests_enabled: true
+    integration_tests_enabled: true
+    performance_tests_enabled: true
+    coverage_threshold: 80
+
+  # Deployment settings
+  deployment:
+    staging_branch: "develop"
+    production_branch: "main"
+    health_check_timeout: 300
+    rollback_enabled: true
+
+# Redis Configuration
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+  password: ""  # Set via environment variable AUJ_REDIS_PASSWORD
+  enabled: false
+  timeout: 30
+  max_connections: 10
+
+# Security Settings
+security:
+  enable_2fa: false
+  session_timeout_minutes: 30
+  max_login_attempts: 5
+  encryption_key: ""  # Set via environment variable
+  ssl_enabled: true
+  api_key_required: true
+
+  # API security
+  api_security:
+    rate_limiting_enabled: true
+    requests_per_minute: 100
+    enable_cors: true
+    jwt_expiration_hours: 24
+
+  # Rate limiting configuration
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 100
+    burst_limit: 200
+
+  # Encryption configuration
+  encryption:
+    algorithm: "AES256"
+    key_rotation_days: 90
+
+# Backup and Recovery
+backup:
+  enabled: true
+  interval_hours: 6
+  retention_days: 30
+  backup_path: "backups"
+
+  # Backup targets
+  targets:
+    - database
+    - configuration
+    - logs
+    - performance_data
+
+# Monitoring and Health Checks
+monitoring:
+  health_check_interval_seconds: 60
+  performance_logging_interval_minutes: 15
+
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    host: "localhost"
+    port: 9090
+    scrape_interval: "15s"
+    retention: "30d"
+
+  # Grafana dashboards
+  grafana:
+    enabled: true
+    host: "localhost"
+    port: 3000
+    dashboards:
+      - system_overview
+      - trading_performance
+      - agent_metrics
+      - risk_monitoring
+
+  # Alert thresholds
+  alert_thresholds:
+    memory_usage_percent: 85
+    cpu_usage_percent: 80
+    disk_usage_percent: 90
+    error_rate_percent: 5
+    message_queue_length: 10000
+    response_time_ms: 5000

@@ -1,0 +1,9 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include auj_platform/config *.yaml *.yml
+recursive-include auj_platform/dashboard/config *.yaml *.yml
+recursive-include auj_platform/src/core *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store

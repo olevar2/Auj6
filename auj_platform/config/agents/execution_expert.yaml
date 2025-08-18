@@ -1,0 +1,49 @@
+# Execution Expert Agent Configuration
+# This file contains configurable parameters for the ExecutionExpert agent
+
+# Market impact and execution parameters
+max_market_impact: 0.05           # 5 basis points maximum market impact
+min_liquidity_threshold: 10000    # Minimum volume required for execution
+optimal_spread_threshold: 0.002   # 20 basis points optimal spread threshold
+slippage_tolerance: 0.001         # 10 basis points slippage tolerance
+
+# Order book analysis parameters
+min_order_book_depth: 5           # Minimum order book depth levels to analyze
+bid_ask_spread_alert: 0.003       # 30 basis points spread alert threshold
+liquidity_warning_threshold: 5000 # Warning threshold for low liquidity
+
+# Execution timing parameters
+execution_delay_tolerance: 1.0    # Maximum execution delay in seconds
+optimal_execution_window: 300     # Optimal execution window in seconds
+market_session_buffer: 1800       # Buffer time for market session changes (30 min)
+
+# Slippage prediction parameters
+slippage_history_window: 20       # Historical periods for slippage analysis
+slippage_prediction_confidence: 0.8 # Confidence threshold for slippage predictions
+
+# Order management parameters
+max_order_size_ratio: 0.1         # Maximum order size as ratio of average volume
+order_splitting_threshold: 50000   # Threshold for splitting large orders
+iceberg_order_threshold: 100000   # Threshold for using iceberg orders
+
+# Execution quality metrics
+twap_vwap_deviation_threshold: 0.001  # 10 basis points TWAP/VWAP deviation
+fill_ratio_minimum: 0.95          # Minimum acceptable fill ratio
+execution_shortfall_threshold: 0.002  # 20 basis points execution shortfall threshold
+
+# Fallback mode parameters (when ORDER_BOOK/TICK data unavailable)
+fallback_analysis_enabled: true   # Enable fallback to OHLCV-only analysis
+fallback_spread_estimate: 0.001   # Estimated spread when real data unavailable
+fallback_liquidity_estimate: 50000 # Estimated liquidity when real data unavailable
+
+# Timeframe configuration
+execution_timeframe: "1M"         # Primary timeframe for execution analysis
+liquidity_assessment_timeframes:  # Timeframes for liquidity assessment
+  - "1M"
+  - "5M"
+  - "15M"
+
+# Logging and debugging
+debug_mode: false                 # Enable detailed debug logging
+log_execution_details: true      # Log detailed execution analysis
+log_fallback_warnings: true      # Log warnings when using fallback mode

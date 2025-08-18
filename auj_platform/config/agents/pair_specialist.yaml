@@ -1,0 +1,58 @@
+# Pair Specialist Agent Configuration
+# This file contains configurable parameters for the PairSpecialist agent
+
+# Correlation and cointegration parameters
+correlation_threshold: 0.7        # Threshold for significant correlation
+cointegration_threshold: 0.05     # P-value threshold for cointegration tests
+
+# Currency strength analysis parameters
+strength_calculation_period: 20   # Period for currency strength calculation
+strength_smooth_period: 5         # Smoothing period for strength indicators
+relative_strength_threshold: 0.6  # Threshold for significant relative strength
+
+# Pair selection parameters
+major_pairs_weight: 1.0           # Weight for major currency pairs
+minor_pairs_weight: 0.8           # Weight for minor currency pairs
+exotic_pairs_weight: 0.5          # Weight for exotic currency pairs
+
+# Risk assessment parameters
+pair_volatility_threshold: 0.02   # 2% daily volatility threshold for pairs
+correlation_instability_threshold: 0.3  # Threshold for correlation instability
+spread_widening_alert: 0.001      # 10 basis points spread widening alert
+
+# Technical analysis parameters
+pair_momentum_period: 14          # Period for pair momentum calculation
+mean_reversion_window: 20         # Window for mean reversion analysis
+breakout_confirmation_factor: 1.5 # Factor for breakout confirmation
+
+# Fundamental analysis parameters
+interest_rate_differential_weight: 0.3    # Weight for interest rate differentials
+economic_strength_weight: 0.4             # Weight for economic strength indicators
+political_stability_weight: 0.2           # Weight for political stability factors
+trade_balance_weight: 0.1                 # Weight for trade balance factors
+
+# Cross-pair analysis parameters
+basket_analysis_enabled: true     # Enable currency basket analysis
+hedge_ratio_calculation: true     # Enable hedge ratio calculations
+portfolio_diversification_factor: 0.8  # Factor for portfolio diversification
+
+# Session-based analysis parameters
+london_session_bias: 1.2          # Bias multiplier for London session
+ny_session_bias: 1.0              # Bias multiplier for NY session
+asian_session_bias: 0.8           # Bias multiplier for Asian session
+overlap_period_boost: 1.5         # Boost factor during session overlaps
+
+# Signal generation parameters
+pair_signal_confidence_min: 0.6   # Minimum confidence for pair signals
+multi_pair_confluence_bonus: 0.2  # Bonus for multi-pair signal confluence
+pair_divergence_penalty: -0.1     # Penalty for pair signal divergence
+
+# Advanced metrics parameters
+beta_calculation_period: 60       # Period for beta calculation (days)
+tracking_error_threshold: 0.02    # 2% tracking error threshold
+information_ratio_minimum: 0.5    # Minimum information ratio for strategies
+
+# Logging and debugging
+debug_mode: false                 # Enable detailed debug logging
+log_correlation_analysis: true   # Log correlation analysis details
+log_strength_calculations: true  # Log currency strength calculations

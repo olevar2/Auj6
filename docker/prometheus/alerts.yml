@@ -1,0 +1,82 @@
+groups:
+  - name: auj_platform_alerts
+    rules:
+      # Platform Health Alerts
+      - alert: AUJPlatformDown
+        expr: up{job="auj-platform"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AUJ Platform is down"
+          description: "AUJ Platform has been down for more than 1 minute"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionFailed
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection failed"
+          description: "PostgreSQL database is not responding"
+
+      # Trading Performance Alerts
+      - alert: LowAgentWinRate
+        expr: auj_agent_win_rate < 0.4
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Agent win rate below threshold"
+          description: "Agent {{ $labels.agent }} has win rate below 40%"
+
+      # System Performance
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_free_bytes{fstype!="tmpfs"}) / node_filesystem_size_bytes{fstype!="tmpfs"} * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage is above 90% on {{ $labels.mountpoint }}"
+
+      # Message Queue Alerts
+      - alert: RabbitMQQueueBacklog
+        expr: rabbitmq_queue_messages > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ queue has high backlog"
+          description: "Queue {{ $labels.queue }} has more than 1000 messages"
+
+      # API Response Time
+      - alert: HighAPIResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="auj-platform"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API response time"
+          description: "95th percentile response time is above 1 second"

@@ -1,0 +1,50 @@
+# Microstructure Agent Configuration
+# This file contains configurable parameters for the MicrostructureAgent
+
+# Order flow analysis parameters
+order_flow_threshold: 0.6          # Threshold for significant order flow detection
+tick_direction_sensitivity: 0.1    # Sensitivity for tick direction analysis
+market_maker_threshold: 0.7        # Threshold for market maker activity detection
+liquidity_provision_threshold: 0.5 # Threshold for liquidity provision analysis
+
+# Microstructure analysis parameters
+price_impact_threshold: 0.001      # 10 basis points price impact threshold
+order_book_imbalance_threshold: 0.3 # Threshold for order book imbalance detection
+trade_intensity_threshold: 100     # Minimum trades per minute for high intensity
+
+# Tick data analysis parameters
+tick_size_multiplier: 1.0          # Multiplier for tick size calculations
+minimum_tick_volume: 1000          # Minimum volume per tick for analysis
+tick_direction_window: 10          # Window size for tick direction analysis
+
+# Market making detection parameters
+bid_ask_update_frequency: 5        # Updates per minute for market making detection
+quote_stability_threshold: 0.8     # Threshold for quote stability analysis
+market_maker_volume_ratio: 0.3     # Volume ratio threshold for market maker detection
+
+# Liquidity analysis parameters
+effective_spread_threshold: 0.002  # 20 basis points effective spread threshold
+realized_spread_threshold: 0.001   # 10 basis points realized spread threshold
+temporary_impact_threshold: 0.0005 # 5 basis points temporary impact threshold
+
+# Fallback mode parameters (when detailed tick data unavailable)
+fallback_analysis_enabled: true    # Enable fallback to OHLCV-based analysis
+fallback_order_flow_estimate: 0.5  # Estimated order flow when tick data unavailable
+fallback_spread_multiplier: 1.5    # Multiplier for spread estimation in fallback mode
+
+# Signal generation parameters
+microstructure_signal_weight: 0.8  # Weight for microstructure signals
+order_flow_signal_weight: 0.6      # Weight for order flow signals
+liquidity_signal_weight: 0.7       # Weight for liquidity signals
+
+# Timeframe configuration
+primary_analysis_timeframe: "1M"   # Primary timeframe for microstructure analysis
+aggregation_timeframes:            # Timeframes for data aggregation
+  - "1M"
+  - "5M"
+
+# Logging and debugging
+debug_mode: false                  # Enable detailed debug logging
+log_microstructure_details: true  # Log detailed microstructure analysis
+log_order_flow_analysis: true     # Log order flow analysis details
+log_fallback_warnings: true       # Log warnings when using fallback mode

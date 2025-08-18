@@ -1,0 +1,184 @@
+version: '3.8'
+
+services:
+  # AUJ Platform Core Application
+  auj-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: auj_platform_core
+    restart: unless-stopped
+    ports:
+      - "8000:8000"  # API port
+      - "8501:8501"  # Dashboard port
+    volumes:
+      - ./auj_platform/data:/app/data
+      - ./auj_platform/logs:/app/logs
+      - ./auj_platform/config:/app/config:ro
+    environment:
+      - PYTHONPATH=/app
+      - AUJ_ENV=production
+      - DATABASE_URL=postgresql://auj_user:auj_password@postgres:5432/auj_platform
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://auj_user:auj_password@rabbitmq:5672/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - auj_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: auj_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: auj_platform
+      POSTGRES_USER: auj_user
+      POSTGRES_PASSWORD: auj_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - auj_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auj_user -d auj_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Caching and Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: auj_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass auj_redis_password
+    volumes:
+      - redis_data:/data
+    networks:
+      - auj_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "auj_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: auj_rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: auj_user
+      RABBITMQ_DEFAULT_PASS: auj_password
+      RABBITMQ_DEFAULT_VHOST: auj_vhost
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - auj_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: auj_prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - auj_network
+    depends_on:
+      - auj-platform
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: auj_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: auj_admin_password
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./docker/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./docker/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+    networks:
+      - auj_network
+    depends_on:
+      - prometheus
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: auj_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - auj_network
+    depends_on:
+      - auj-platform
+      - grafana
+
+# Network configuration
+networks:
+  auj_network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+# Persistent volumes
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

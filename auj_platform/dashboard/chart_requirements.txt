@@ -1,0 +1,26 @@
+# Additional requirements for chart analysis module
+# Add these to your main requirements.txt
+
+# Technical Analysis Library
+TA-Lib==0.4.29
+
+# Advanced Plotting (already included but ensuring version)
+plotly>=5.17.0
+
+# Scientific Computing (usually already available)
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Optional: For advanced pattern recognition
+scikit-learn>=1.3.0
+
+# Optional: For AI-enhanced indicators
+tensorflow>=2.13.0  # For LSTM and neural network indicators
+
+# Optional: For real-time data feeds
+websocket-client>=1.6.0  # For real-time price feeds
+requests>=2.31.0  # For API calls
+
+# Optional: For advanced charting features
+matplotlib>=3.7.0  # For additional chart types
+seaborn>=0.12.0  # For statistical visualizations

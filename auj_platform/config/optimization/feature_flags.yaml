@@ -1,0 +1,9 @@
+# Feature flags for optimization system
+enable_walk_forward_validation: true
+enable_ensemble_modeling: true
+enable_agent_hierarchy: true
+enable_selective_indicators: true
+enable_regime_detection: true
+enable_anti_overfitting: true
+enable_performance_decay: true
+enable_regularization: true

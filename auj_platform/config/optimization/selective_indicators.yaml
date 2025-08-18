@@ -1,0 +1,12 @@
+# Selective indicators configuration for different market regimes
+trending_market:
+  elite_indicators: []
+
+sideways_market:
+  elite_indicators: []
+
+volatile_market:
+  elite_indicators: []
+
+low_volatility_market:
+  elite_indicators: []
