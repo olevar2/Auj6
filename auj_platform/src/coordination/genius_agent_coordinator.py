@@ -16,7 +16,7 @@ Key Features:
 import asyncio
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
+from dataclasses import field
 from enum import Enum
 import pandas as pd
 from decimal import Decimal
@@ -27,81 +27,22 @@ from ..core.data_contracts import (
     TradeSignal, AgentDecision, MarketConditions, AgentRank,
     MarketRegime, ConfidenceLevel, TradeDirection, PlatformStatus
 )
-import logging
+from ..core.event_bus import event_bus, Event, EventType
 
-# Define minimal exceptions to avoid circular imports
-class CoordinationError(Exception):
-    """Coordination related error."""
-    pass
-
-class ValidationError(Exception):
-    """Validation related error."""
-    pass
-
-class AgentError(Exception):
-    """Agent related error."""
-    pass
 
 logger = logging.getLogger(__name__)
 from ..agents.base_agent import BaseAgent, AnalysisResult
 from ..registry.agent_indicator_mapping import AGENT_MAPPINGS, get_agent_indicators
 
-
-class AnalysisCyclePhase(str, Enum):
-    """Phases of the analysis cycle."""
-    INITIALIZATION = "INITIALIZATION"
-    DATA_COLLECTION = "DATA_COLLECTION"
-    INDICATOR_CALCULATION = "INDICATOR_CALCULATION"
-    AGENT_ANALYSIS = "AGENT_ANALYSIS"
-    DECISION_SYNTHESIS = "DECISION_SYNTHESIS"
-    VALIDATION = "VALIDATION"
-    EXECUTION_PREPARATION = "EXECUTION_PREPARATION"
-    COMPLETED = "COMPLETED"
-    ERROR = "ERROR"
-
-
-@dataclass
-class AnalysisCycleState:
-    """State tracking for analysis cycle."""
-    cycle_id: str
-    phase: AnalysisCyclePhase
-    start_time: datetime
-    symbol: str
-    alpha_agent: Optional[str] = None
-    beta_agents: List[str] = field(default_factory=list)
-    gamma_agents: List[str] = field(default_factory=list)
-    agent_decisions: Dict[str, AnalysisResult] = field(default_factory=dict)
-    final_signal: Optional[TradeSignal] = None
-    performance_data: Dict[str, Any] = field(default_factory=dict)
-    error_log: List[str] = field(default_factory=list)
-    market_conditions: Optional[MarketConditions] = None
-
-    @property
-    def duration_seconds(self) -> float:
-        """Get cycle duration in seconds."""
-        return (datetime.utcnow() - self.start_time).total_seconds()
-
-    @property
-    def is_successful(self) -> bool:
-        """Check if cycle completed successfully."""
-        return self.phase == AnalysisCyclePhase.COMPLETED and not self.error_log
-
-
-@dataclass
-class EliteIndicatorSet:
-    """Elite indicator set for specific market regime."""
-    regime: MarketRegime
-    indicators: List[str]
-    performance_score: float
-    validation_score: float
-    last_updated: datetime
-    out_of_sample_performance: Dict[str, float]
-    robustness_metrics: Dict[str, float]
-
-    @property
-    def composite_score(self) -> float:
-        """Calculate composite score favoring out-of-sample performance."""
-        return (self.validation_score * 0.7) + (self.performance_score * 0.3)
+# Import shared coordination types and exceptions
+from .shared import (
+    AnalysisCyclePhase,
+    AnalysisCycleState,
+    EliteIndicatorSet,
+    CoordinationError,
+    ValidationError,
+    AgentError
+)
 
 
 class GeniusAgentCoordinator:

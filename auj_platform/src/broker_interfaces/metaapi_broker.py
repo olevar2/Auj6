@@ -8,7 +8,7 @@ Provides all trading operations for Linux deployment.
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 from decimal import Decimal
 
 from .base_broker import BaseBroker
@@ -549,3 +549,24 @@ class MetaApiBroker(BaseBroker):
                 "risk_checks_enabled": self.risk_checks_enabled
             }
         }
+    
+    # Event-driven order monitoring methods
+    async def subscribe_to_order_updates(self, order_id: str, callback: Callable):
+        """
+        Subscribe to order status updates for event-driven execution.
+        
+        Args:
+            order_id: Order ID to monitor
+            callback: Async callback function that receives order status updates
+        """
+        await self.provider.subscribe_to_order_updates(order_id, callback)
+    
+    async def unsubscribe_from_order_updates(self, order_id: str, callback: Callable):
+        """
+        Unsubscribe from order status updates.
+        
+        Args:
+            order_id: Order ID to stop monitoring
+            callback: Callback function to remove
+        """
+        await self.provider.unsubscribe_from_order_updates(order_id, callback)

@@ -99,6 +99,7 @@ class MetaApiProvider(BaseDataProvider):
         self.price_cache: Dict[str, Dict[str, Any]] = {}
         self.tick_subscribers: Dict[str, List[Callable]] = {}
         self.price_subscribers: Dict[str, List[Callable]] = {}
+        self.order_subscribers: Dict[str, List[Callable]] = {}  # Event-driven order tracking
         
         # Request tracking
         self.request_id = 0
@@ -471,9 +472,19 @@ class MetaApiProvider(BaseDataProvider):
         logger.debug(f"Positions update: {len(positions)} positions")
 
     async def _handle_orders_update(self, data: Dict[str, Any]):
-        """Handle orders update."""
+        """Handle orders update with event emission for subscribers."""
         orders = data.get("orders", [])
         logger.debug(f"Orders update: {len(orders)} orders")
+        
+        # Notify subscribers for each order update
+        for order in orders:
+            order_id = str(order.get("id", ""))
+            if order_id and order_id in self.order_subscribers:
+                for callback in self.order_subscribers[order_id]:
+                    try:
+                        await callback(order)
+                    except Exception as e:
+                        logger.error(f"Error in order update callback for {order_id}: {e}")
 
     async def _handle_synchronization(self, data: Dict[str, Any]):
         """Handle synchronization status."""
@@ -838,18 +849,37 @@ class MetaApiProvider(BaseDataProvider):
         if symbol in self.tick_subscribers:
             if callback in self.tick_subscribers[symbol]:
                 self.tick_subscribers[symbol].remove(callback)
-            
-            # If no more subscribers, unsubscribe from WebSocket
-            if not self.tick_subscribers[symbol]:
-                del self.tick_subscribers[symbol]
-                if self.websocket and not self.websocket.closed:
-                    unsubscription_msg = {
-                        "type": "unsubscribe",
-                        "symbol": symbol,
-                        "subscriptions": ["ticks"]
-                    }
-                    await self.websocket.send_str(json.dumps(unsubscription_msg))
-                    logger.debug(f"Unsubscribed from ticks for {symbol}")
+                logger.debug(f"Unsubscribed from ticks for {symbol}")
+    
+    async def subscribe_to_order_updates(self, order_id: str, callback: Callable):
+        """
+        Subscribe to order status updates for event-driven execution.
+        
+        Args:
+            order_id: Order ID to monitor
+            callback: Async callback function that receives order status updates
+        """
+        if order_id not in self.order_subscribers:
+            self.order_subscribers[order_id] = []
+        self.order_subscribers[order_id].append(callback)
+        logger.debug(f"Subscribed to order updates for order {order_id}")
+    
+    async def unsubscribe_from_order_updates(self, order_id: str, callback: Callable):
+        """
+        Unsubscribe from order status updates.
+        
+        Args:
+            order_id: Order ID to stop monitoring
+            callback: Callback function to remove
+        """
+        if order_id in self.order_subscribers:
+            if callback in self.order_subscribers[order_id]:
+                self.order_subscribers[order_id].remove(callback)
+                logger.debug(f"Unsubscribed from order updates for order {order_id}")
+                
+                # Clean up empty subscriber lists
+                if not self.order_subscribers[order_id]:
+                    del self.order_subscribers[order_id]
 
     async def subscribe_to_prices(self, symbol: str, callback: Callable):
         """Subscribe to price updates for a symbol."""

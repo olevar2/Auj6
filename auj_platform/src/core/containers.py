@@ -37,20 +37,6 @@ from ..regime_detection.regime_classifier import RegimeClassifier
 # Agent and coordination systems
 from ..hierarchy.hierarchy_manager import HierarchyManager
 from ..coordination.genius_agent_coordinator import GeniusAgentCoordinator
-
-# Data and indicator systems
-from ..data_providers.data_provider_manager import DataProviderManager
-from ..optimization.selective_indicator_engine import SelectiveIndicatorEngine
-
-# Trading engine
-from ..trading_engine.dynamic_risk_manager import DynamicRiskManager
-from ..trading_engine.execution_handler import ExecutionHandler
-from ..trading_engine.deal_monitoring_teams import DealMonitoringTeams
-
-# Messaging system
-from ..messaging.messaging_service import MessagingService, MessagingServiceFactory
-from ..coordination.messaging_coordinator import MessagingCoordinator
-
 # Monitoring system
 from ..monitoring.economic_monitor import EconomicMonitor
 
@@ -189,9 +175,15 @@ class PlatformContainer(containers.DeclarativeContainer):
     )
 
     # Trading engine components
+    risk_state_repository = providers.Singleton(
+        RiskStateRepository,
+        db_manager=unified_database_manager
+    )
+
     dynamic_risk_manager = providers.Singleton(
         DynamicRiskManager,
-        config_manager=unified_config_manager
+        config_manager=unified_config_manager,
+        risk_repository=risk_state_repository
     )
 
     execution_handler = providers.Singleton(

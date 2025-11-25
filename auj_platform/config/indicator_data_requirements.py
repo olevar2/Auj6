@@ -55,15 +55,6 @@ class IndicatorDataRequirement:
 INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
 
     # ==================== MOMENTUM INDICATORS ====================
-    "acceleration_deceleration_indicator": IndicatorDataRequirement(
-        indicator_name="acceleration_deceleration_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close", "volume"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=34
-    ),
 
     "awesome_oscillator_indicator": IndicatorDataRequirement(
         indicator_name="awesome_oscillator_indicator",
@@ -85,15 +76,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=26
     ),
 
-    "momentum_indicator": IndicatorDataRequirement(
-        indicator_name="momentum_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=14
-    ),
 
     "rate_of_change_indicator": IndicatorDataRequirement(
         indicator_name="rate_of_change_indicator",
@@ -115,15 +97,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=14
     ),
 
-    "stochastic_oscillator_indicator": IndicatorDataRequirement(
-        indicator_name="stochastic_oscillator_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=14
-    ),
 
     "stochastic_rsi_indicator": IndicatorDataRequirement(
         indicator_name="stochastic_rsi_indicator",
@@ -135,65 +108,11 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=21
     ),
 
-    "williams_r_indicator": IndicatorDataRequirement(
-        indicator_name="williams_r_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=14
-    ),
 
-    "chande_momentum_oscillator_indicator": IndicatorDataRequirement(
-        indicator_name="chande_momentum_oscillator_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
-    "squeeze_momentum_indicator": IndicatorDataRequirement(
-        indicator_name="squeeze_momentum_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
-    "trix_indicator": IndicatorDataRequirement(
-        indicator_name="trix_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=18
-    ),
 
-    "ultimate_oscillator_indicator": IndicatorDataRequirement(
-        indicator_name="ultimate_oscillator_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=28
-    ),
 
-    "coppock_curve_indicator": IndicatorDataRequirement(
-        indicator_name="coppock_curve_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=24
-    ),
 
     # ==================== TREND INDICATORS ====================
     "adx_indicator": IndicatorDataRequirement(
@@ -376,15 +295,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=20
     ),
 
-    "standard_deviation_indicator": IndicatorDataRequirement(
-        indicator_name="standard_deviation_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
     "standard_deviation_channels_indicator": IndicatorDataRequirement(
         indicator_name="standard_deviation_channels_indicator",
@@ -527,15 +437,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=34
     ),
 
-    "chaikin_oscillator_indicator": IndicatorDataRequirement(
-        indicator_name="chaikin_oscillator_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close", "volume"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=10
-    ),
 
     # ==================== MOVING AVERAGE INDICATORS ====================
     "simple_moving_average_indicator": IndicatorDataRequirement(
@@ -558,15 +459,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=12
     ),
 
-    "weighted_moving_average_indicator": IndicatorDataRequirement(
-        indicator_name="weighted_moving_average_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
     "hull_moving_average_indicator": IndicatorDataRequirement(
         indicator_name="hull_moving_average_indicator",
@@ -618,35 +510,8 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=21
     ),
     # ==================== PATTERN RECOGNITION INDICATORS ====================
-    "abandoned_baby_indicator": IndicatorDataRequirement(
-        indicator_name="abandoned_baby_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=3
-    ),
 
-    "belt_hold_indicator": IndicatorDataRequirement(
-        indicator_name="belt_hold_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=1
-    ),
 
-    "dark_cloud_cover_indicator": IndicatorDataRequirement(
-        indicator_name="dark_cloud_cover_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=2
-    ),
 
     "doji_indicator": IndicatorDataRequirement(
         indicator_name="doji_indicator",
@@ -658,25 +523,7 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=1
     ),
 
-    "doji_star_indicator": IndicatorDataRequirement(
-        indicator_name="doji_star_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=2
-    ),
 
-    "dragonfly_doji_indicator": IndicatorDataRequirement(
-        indicator_name="dragonfly_doji_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=1
-    ),
 
     "engulfing_pattern_indicator": IndicatorDataRequirement(
         indicator_name="engulfing_pattern_indicator",
@@ -688,25 +535,7 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=2
     ),
 
-    "evening_star_indicator": IndicatorDataRequirement(
-        indicator_name="evening_star_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=3
-    ),
 
-    "gravestone_doji_indicator": IndicatorDataRequirement(
-        indicator_name="gravestone_doji_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=1
-    ),
 
     "hammer_indicator": IndicatorDataRequirement(
         indicator_name="hammer_indicator",
@@ -718,35 +547,8 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=1
     ),
 
-    "hanging_man_indicator": IndicatorDataRequirement(
-        indicator_name="hanging_man_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=1
-    ),
 
-    "harami_indicator": IndicatorDataRequirement(
-        indicator_name="harami_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=2
-    ),
 
-    "harami_cross_indicator": IndicatorDataRequirement(
-        indicator_name="harami_cross_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=2
-    ),
 
     "head_and_shoulders_indicator": IndicatorDataRequirement(
         indicator_name="head_and_shoulders_indicator",
@@ -768,15 +570,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=15
     ),
 
-    "wedge_pattern_indicator": IndicatorDataRequirement(
-        indicator_name="wedge_pattern_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=15
-    ),
 
     # ==================== FIBONACCI INDICATORS ====================
     "fibonacci_retracement_indicator": IndicatorDataRequirement(
@@ -799,35 +592,8 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=20
     ),
 
-    "fibonacci_fan_indicator": IndicatorDataRequirement(
-        indicator_name="fibonacci_fan_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
-    "fibonacci_arcs_indicator": IndicatorDataRequirement(
-        indicator_name="fibonacci_arcs_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
-    "fibonacci_time_zone_indicator": IndicatorDataRequirement(
-        indicator_name="fibonacci_time_zone_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
     # ==================== GANN INDICATORS ====================
     "gann_angles_indicator": IndicatorDataRequirement(
@@ -1140,46 +906,10 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=10
     ),
 
-    "true_strength_index_indicator": IndicatorDataRequirement(
-        indicator_name="true_strength_index_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=25
-    ),
 
     # ==================== FRACTAL INDICATORS ====================
-    "fractal_adaptive_moving_average_indicator": IndicatorDataRequirement(
-        indicator_name="fractal_adaptive_moving_average_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=50
-    ),
 
-    "fractal_chaos_oscillator_indicator": IndicatorDataRequirement(
-        indicator_name="fractal_chaos_oscillator_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=100
-    ),
 
-    "chaos_fractal_dimension_indicator": IndicatorDataRequirement(
-        indicator_name="chaos_fractal_dimension_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=100
-    ),
 
     # ==================== ELLIOTT WAVE INDICATORS ====================
     "elliott_wave_oscillator_indicator": IndicatorDataRequirement(
@@ -1192,26 +922,8 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=34
     ),
 
-    "wave_point_indicator": IndicatorDataRequirement(
-        indicator_name="wave_point_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=50
-    ),
 
     # ==================== SUPPORT/RESISTANCE INDICATORS ====================
-    "pivot_point_indicator": IndicatorDataRequirement(
-        indicator_name="pivot_point_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=1
-    ),
 
     "central_pivot_range_indicator": IndicatorDataRequirement(
         indicator_name="central_pivot_range_indicator",
@@ -1224,15 +936,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
     ),
 
     # ==================== MISCELLANEOUS INDICATORS ====================
-    "zig_zag_indicator": IndicatorDataRequirement(
-        indicator_name="zig_zag_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=5
-    ),
 
     "force_index_indicator": IndicatorDataRequirement(
         indicator_name="force_index_indicator",
@@ -1275,15 +978,6 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         minimum_periods=20
     ),
 
-    "ai_parabolic_sar_indicator": IndicatorDataRequirement(
-        indicator_name="ai_parabolic_sar_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=2
-    ),
 
     "volume_mass_index_indicator": IndicatorDataRequirement(
         indicator_name="volume_mass_index_indicator",
@@ -1349,55 +1043,10 @@ INDICATOR_DATA_REQUIREMENTS: Dict[str, IndicatorDataRequirement] = {
         additional_requirements={"sector_data": "required"}
     ),
 
-    "support_resistance_indicator": IndicatorDataRequirement(
-        indicator_name="support_resistance_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close", "volume"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=50
-    ),
 
-    "synthetic_option_indicator": IndicatorDataRequirement(
-        indicator_name="synthetic_option_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["open", "high", "low", "close", "volume"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=100
-    ),
 
-    "time_segmented_volume_indicator": IndicatorDataRequirement(
-        indicator_name="time_segmented_volume_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["high", "low", "close", "volume"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=50
-    ),
 
-    "triangular_moving_average_indicator": IndicatorDataRequirement(
-        indicator_name="triangular_moving_average_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=20
-    ),
 
-    "variable_moving_average_indicator": IndicatorDataRequirement(
-        indicator_name="variable_moving_average_indicator",
-        primary_data_type=DataType.OHLCV,
-        required_columns=["close", "volume"],
-        available_providers=["MetaApiProvider", "MetaApiProvider", "YahooFinanceProvider"],
-        fallback_providers=["YahooFinanceProvider"],
-        is_active=True,
-        minimum_periods=50
-    )
 }
 
 # Provider Capability Mapping

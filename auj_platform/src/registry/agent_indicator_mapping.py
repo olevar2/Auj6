@@ -21,43 +21,35 @@ from typing import Dict, List, Any
 
 # Complete Agent to Indicator Mapping Dictionary with ALL real indicators manually assigned
 AGENT_MAPPINGS = {
-    "StrategyExpert": {
-        "specialization": "Core strategy, trend following, and momentum analysis",
-        "primary_focus": ["trend_identification", "momentum_analysis", "strategic_signals"],
+    "MomentumAgent": {
+        "specialization": "Momentum analysis and oscillator signals",
+        "primary_focus": ["momentum_analysis", "oscillator_signals", "divergence_detection"],
         "assigned_indicators": [
-            # ALL Momentum Indicators (31)
-            "acceleration_deceleration_indicator",
-            "awesome_oscillator_indicator",
-            "bears_and_bulls_power_indicator",
-            "chaikin_oscillator_indicator",
-            "chande_momentum_oscillator_indicator",
-            "commodity_channel_index_indicator",
-            "coppock_curve_indicator",
-            "demarker_indicator",
-            "detrended_price_oscillator_indicator",
-            "fisher_transform_indicator",
-            "know_sure_thing_indicator",
-            "macd_indicator",
-            "market_cipher_b_indicator",
-            "momentum_indicator",
-            "money_flow_index_indicator",
-            "percentage_price_oscillator_indicator",
-            "qstick_indicator",
-            "quantum_momentum_oracle_indicator",
-            "quantum_phase_momentum_indicator",
-            "rate_of_change_indicator",
-            "relative_vigor_index_indicator",
             "rsi_indicator",
-            "squeeze_momentum_indicator",
+            "macd_indicator",
             "stochastic_rsi_indicator",
-            "trix_indicator",
-            "tsi_oscillator_indicator",
-            "velocity_indicator",
-            "wr_commodity_channel_index_indicator",
-            "wr_degradation_indicator",
-            "wr_signal_indicator",
+            "commodity_channel_index_indicator",
+            "money_flow_index_indicator",
+            "awesome_oscillator_indicator",
+            "fisher_transform_indicator",
+            "rate_of_change_indicator"
+        ],
+        "indicator_count": 8,
+        "data_requirements": ["OHLCV"],
+        "minimum_data_points": 50,
+        "analysis_focus": {
+            "momentum_weight": 0.8,
+            "trend_weight": 0.2,
+            "confluence_threshold": 2
+        },
+        "decision_logic": "momentum_strength_based",
+        "risk_contribution": "momentum_risk_assessment"
+    },
 
-            # ALL Trend Indicators (29)
+    "TrendAgent": {
+        "specialization": "Trend identification and strength analysis",
+        "primary_focus": ["trend_identification", "trend_strength", "trend_direction"],
+        "assigned_indicators": [
             "adx_indicator",
             "alligator_indicator",
             "aroon_indicator",
@@ -87,16 +79,16 @@ AGENT_MAPPINGS = {
             "zero_lag_ema_indicator",
             "zone_indicator"
         ],
-        "indicator_count": 59,
+        "indicator_count": 29,
         "data_requirements": ["OHLCV"],
         "minimum_data_points": 50,
         "analysis_focus": {
-            "momentum_weight": 0.4,
-            "trend_weight": 0.6,
-            "confluence_threshold": 3
+            "trend_weight": 0.9,
+            "momentum_weight": 0.1,
+            "confluence_threshold": 2
         },
-        "decision_logic": "strategic_confluence_based",
-        "risk_contribution": "directional_bias_assessment"
+        "decision_logic": "trend_strength_based",
+        "risk_contribution": "trend_risk_assessment"
     },
 
     "RiskGenius": {
@@ -140,75 +132,27 @@ AGENT_MAPPINGS = {
         "specialization": "All forms of pattern recognition and wave analysis",
         "primary_focus": ["candlestick_patterns", "chart_patterns", "wave_analysis", "fractal_patterns"],
         "assigned_indicators": [
-            # ALL Candlestick Patterns (29)
-            "abandoned_baby_indicator",
-            "belt_hold_indicator",
-            "dark_cloud_cover_indicator",
-            "doji_indicator",
-            "doji_star_indicator",
-            "dragonfly_doji_indicator",
+            # Candlestick Patterns
             "engulfing_pattern_indicator",
-            "evening_star_indicator",
-            "gravestone_doji_indicator",
+            "doji_indicator",
             "hammer_indicator",
-            "hanging_man_indicator",
-            "harami_cross_indicator",
-            "harami_indicator",
-            "head_and_shoulders_indicator",
-            "high_wave_candle_indicator",
-            "inverted_hammer_indicator",
-            "kicking_indicator",
-            "long_legged_doji_indicator",
-            "marubozu_indicator",
-            "morning_star_indicator",
-            "piercing_line_indicator",
-            "rickshaw_man_indicator",
-            "rising_three_methods_indicator",
             "shooting_star_indicator",
-            "spinning_top_indicator",
-            "tasuki_gap_indicator",
-            "three_black_crows_indicator",
-            "three_line_strike_indicator",
             "three_white_soldiers_indicator",
 
-            # Chart Patterns (2)
+            # Chart Patterns
+            "head_and_shoulders_indicator",
             "triangle_pattern_indicator",
-            "wedge_pattern_indicator",
 
-            # ALL Elliott Wave Indicators (6)
+            # Elliott Wave
             "elliott_wave_oscillator_indicator",
-            "fractal_wave_counter_indicator",
-            "impulsive_corrective_classifier_indicator",
-            "photonic_wavelength_analyzer",
-            "wave_point_indicator",
             "wave_structure_indicator",
 
-            # ALL Fractal Indicators (10)
-            "chaos_fractal_dimension_indicator",
-            "fractal_adaptive_moving_average_indicator",
-            "fractal_breakout_indicator",
-            "fractal_channel_indicator",
-            "fractal_chaos_oscillator_indicator",
-            "fractal_correlation_dimension_indicator",
-            "fractal_efficiency_ratio_indicator",
-            "fractal_market_hypothesis_indicator",
-            "mandelbrot_fractal_indicator",
-            "multi_fractal_dfa_indicator",
-
-            # ALL Fibonacci Indicators (11)
-            "fibonacci_arcs_indicator",
-            "fibonacci_channel_indicator",
-            "fibonacci_clusters_indicator",
-            "fibonacci_extension_indicator",
-            "fibonacci_fan_indicator",
+            # Fibonacci
             "fibonacci_retracement_indicator",
-            "fibonacci_spirals_indicator",
-            "fibonacci_time_extension_indicator",
-            "fibonacci_time_zone_indicator",
-            "projection_arc_calculator_indicator",
-            "time_zone_analysis_indicator"
+            "fibonacci_extension_indicator",
+            "fibonacci_clusters_indicator"
         ],
-        "indicator_count": 58,
+        "indicator_count": 12,
         "data_requirements": ["OHLCV"],
         "minimum_data_points": 100,
         "analysis_focus": {
@@ -272,14 +216,9 @@ AGENT_MAPPINGS = {
             "price_time_relationships_indicator",
             "square_of_nine_calculator_indicator",
 
-            # Economic Indicators (5)
-            "economic_calendar_confluence_indicator",
-            "economic_event_impact_indicator",
-            "event_volatility_predictor",
-            "fundamental_momentum_indicator",
-            "news_sentiment_impact_indicator"
+            # Economic Indicators (None active)
         ],
-        "indicator_count": 17,
+        "indicator_count": 12,
         "data_requirements": ["OHLCV", "TIMESTAMP"],
         "minimum_data_points": 40,
         "analysis_focus": {
@@ -451,40 +390,7 @@ AGENT_MAPPINGS = {
         "risk_contribution": "microstructure_risk_assessment"
     },
 
-    "SimulationExpert": {
-        "specialization": "Backtesting, forward testing, and scenario analysis",
-        "primary_focus": ["backtesting", "forward_testing", "scenario_analysis", "simulation_modeling"],
-        "assigned_indicators": [
-            # Support/Resistance & Others (14)
-            "standard_deviation_indicator",
-            "support_resistance_indicator",
-            "stochastic_oscillator_indicator",
-            "synthetic_option_indicator",
-            "time_segmented_volume_indicator",
-            "triangular_moving_average_indicator",
-            "triple_exponential_average_indicator",
-            "true_strength_index_indicator",
-            "ultimate_oscillator_indicator",
-            "variable_moving_average_indicator",
-            "weighted_moving_average_indicator",
-            "williams_r_indicator",
-            "renko_indicator",
-            "zig_zag_indicator",
-            "ai_parabolic_sar_indicator",
-            "pivot_point_indicator"
-        ],
-        "indicator_count": 16,
-        "data_requirements": ["HISTORICAL_DATA", "SIMULATION_PARAMS", "SCENARIO_DATA"],
-        "minimum_data_points": 100,
-        "analysis_focus": {
-            "backtesting_weight": 0.4,
-            "scenario_weight": 0.35,
-            "forward_testing_weight": 0.25,
-            "simulation_horizon": 30
-        },
-        "decision_logic": "simulation_based",
-        "risk_contribution": "simulation_risk_modeling"
-    }
+
 }
 # Utility Functions
 def get_agent_indicators(agent_name):

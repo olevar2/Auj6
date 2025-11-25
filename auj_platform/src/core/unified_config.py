@@ -34,13 +34,27 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 from contextlib import contextmanager
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    CRYPTOGRAPHY_AVAILABLE = True
+except ImportError:
+    CRYPTOGRAPHY_AVAILABLE = False
+    # Define dummy classes/functions if needed or handle in logic
+    Fernet = None
+    
 import base64
 import logging
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    WATCHDOG_AVAILABLE = True
+except ImportError:
+    WATCHDOG_AVAILABLE = False
+    Observer = object
+    FileSystemEventHandler = object
+    
 import tempfile
 import shutil
 
@@ -234,11 +248,20 @@ class ConfigurationEncryption:
     """Secure configuration encryption and decryption."""
 
     def __init__(self, master_key: Optional[str] = None):
+        if not CRYPTOGRAPHY_AVAILABLE:
+            logger.warning("Cryptography module not available. Encryption disabled.")
+            self.master_key = None
+            self.cipher_suite = None
+            return
+
         self.master_key = master_key or self._get_or_create_master_key()
         self.cipher_suite = self._create_cipher_suite()
 
     def _get_or_create_master_key(self) -> str:
         """Get or create master encryption key."""
+        if not CRYPTOGRAPHY_AVAILABLE:
+            return ""
+            
         key_file = Path.home() / ".auj_platform" / "master.key"
 
         if key_file.exists():
@@ -253,16 +276,25 @@ class ConfigurationEncryption:
                 f.write(master_key)
 
             # Set restrictive permissions
-            key_file.chmod(0o600)
+            try:
+                key_file.chmod(0o600)
+            except Exception:
+                pass # Windows might not support this
 
             return master_key
 
-    def _create_cipher_suite(self) -> Fernet:
+    def _create_cipher_suite(self) -> Any:
         """Create cipher suite from master key."""
+        if not CRYPTOGRAPHY_AVAILABLE:
+            return None
         return Fernet(self.master_key.encode())
 
     def encrypt(self, value: str) -> str:
         """Encrypt configuration value."""
+        if not self.cipher_suite:
+            logger.warning("Encryption disabled, returning raw value")
+            return str(value)
+
         if not isinstance(value, str):
             value = str(value)
 
@@ -271,6 +303,10 @@ class ConfigurationEncryption:
 
     def decrypt(self, encrypted_value: str) -> str:
         """Decrypt configuration value."""
+        if not self.cipher_suite:
+            logger.warning("Encryption disabled, returning raw value")
+            return encrypted_value
+
         try:
             encrypted_data = base64.urlsafe_b64decode(encrypted_value.encode())
             decrypted = self.cipher_suite.decrypt(encrypted_data)
@@ -557,6 +593,10 @@ class UnifiedConfigManager:
 
     def _start_file_watcher(self):
         """Start file system watcher for hot reloading."""
+        if not WATCHDOG_AVAILABLE:
+            logger.warning("Watchdog module not available. Hot reloading disabled.")
+            return
+
         try:
             self.watcher = ConfigurationWatcher(self)
             self.observer = Observer()
