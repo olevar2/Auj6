@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script لحذف الملفات غير الضرورية بعد تكامل MetaApi
+Script to safely delete unnecessary files after MetaApi integration
 """
 
 import os
@@ -8,21 +8,21 @@ import shutil
 from datetime import datetime
 
 def create_backup_dir():
-    """إنشاء مجلد backup"""
+    """Create backup directory"""
     backup_dir = f"e:/AUJ/backups/cleanup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     os.makedirs(backup_dir, exist_ok=True)
     return backup_dir
 
 def safe_remove_file(file_path, backup_dir):
-    """حذف ملف مع إنشاء نسخة احتياطية"""
+    """Delete file with backup creation"""
     if os.path.exists(file_path):
-        # إنشاء نسخة احتياطية
+        # Create backup
         rel_path = os.path.relpath(file_path, "e:/AUJ")
         backup_file_path = os.path.join(backup_dir, rel_path)
         os.makedirs(os.path.dirname(backup_file_path), exist_ok=True)
         shutil.copy2(file_path, backup_file_path)
         
-        # حذف الملف الأصلي
+        # Delete original file
         os.remove(file_path)
         print(f"✅ Removed: {file_path} (backed up)")
         return True
@@ -31,7 +31,7 @@ def safe_remove_file(file_path, backup_dir):
         return False
 
 def remove_mt5_core_files(backup_dir):
-    """حذف الملفات الأساسية لـ MT5"""
+    """Delete MT5 core files"""
     files_to_remove = [
         "e:/AUJ/auj_platform/src/data_providers/unified_mt5_provider.py",
         "e:/AUJ/auj_platform/src/data_providers/ohlcv_provider.py",
@@ -50,7 +50,7 @@ def remove_mt5_core_files(backup_dir):
     return removed_count
 
 def clean_cache_files():
-    """تنظيف ملفات cache و build"""
+    """Clean cache and build files"""
     cache_patterns = [
         "e:/AUJ/.mypy_cache/3.13/auj_platform/src/broker_interfaces/mt5_broker.*",
         "e:/AUJ/.mypy_cache/3.13/auj_platform/src/data_providers/unified_mt5_provider.*",
@@ -82,18 +82,18 @@ def clean_cache_files():
     return cleaned_count
 
 def main():
-    """تنفيذ التنظيف"""
+    """Execute cleanup"""
     print("🧹 Starting safe cleanup process...")
     
-    # إنشاء backup directory
+    # Create backup directory
     backup_dir = create_backup_dir()
     print(f"📁 Backup directory: {backup_dir}")
     
     try:
-        # حذف الملفات الأساسية
+        # Delete core files
         core_removed = remove_mt5_core_files(backup_dir)
         
-        # تنظيف cache
+        # Clean cache
         cache_cleaned = clean_cache_files()
         
         print(f"\n✅ Cleanup completed successfully!")

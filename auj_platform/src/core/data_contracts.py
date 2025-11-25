@@ -73,6 +73,41 @@ class ConfidenceLevel(str, Enum):
     VERY_LOW = "VERY_LOW"
 
 
+class RiskLevel(str, Enum):
+    """Risk level enumeration."""
+    CRITICAL = "CRITICAL"
+    VERY_HIGH = "VERY_HIGH"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+    VERY_LOW = "VERY_LOW"
+
+
+class PositionSizeAdjustment(str, Enum):
+    """Types of position size adjustments applied."""
+    ACCOUNT_PROTECTION = "ACCOUNT_PROTECTION"
+    PORTFOLIO_HEAT = "PORTFOLIO_HEAT"
+    CORRELATION_REDUCTION = "CORRELATION_REDUCTION"
+    VOLATILITY_SCALING = "VOLATILITY_SCALING"
+    CONFIDENCE_SCALING = "CONFIDENCE_SCALING"
+    REGIME_ADJUSTMENT = "REGIME_ADJUSTMENT"
+
+
+class RiskMetrics(BaseModel):
+    """Comprehensive risk metrics for a trade."""
+    position_risk_percent: float
+    portfolio_heat: float
+    volatility_adjustment: float
+    correlation_penalty: float
+    confidence_multiplier: float
+    final_position_size: Decimal
+    max_loss_amount: Decimal
+    risk_reward_ratio: float
+    risk_level: RiskLevel
+    adjustments_applied: List[PositionSizeAdjustment]
+    warnings: List[str]
+
+
 class OHLCVData(BaseModel):
     """OHLCV candlestick data structure."""
     timestamp: datetime

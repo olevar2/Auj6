@@ -172,19 +172,35 @@ class GeniusAgentCoordinator:
 
             # Create agents if not provided
             if not self.agents:
-                from agents.risk_genius import RiskGenius
-                from agents.technical_scout import TechnicalScout
-                from agents.fundamental_analyst import FundamentalAnalyst
-                from agents.execution_expert import ExecutionExpert
-                from agents.microstructure_agent import MicrostructureAgent
+                from ..agents.trend_agent import TrendAgent
+                from ..agents.momentum_agent import MomentumAgent
+                from ..agents.pattern_master import PatternMaster
+                from ..agents.decision_master import DecisionMaster
+                from ..agents.indicator_expert import IndicatorExpert
+                from ..agents.session_expert import SessionExpert
+                from ..agents.pair_specialist import PairSpecialist
+                from ..agents.risk_genius import RiskGenius
+                from ..agents.execution_expert import ExecutionExpert
+                from ..agents.microstructure_agent import MicrostructureAgent
+                # SimulationExpert removed - not needed for day trading
 
-                # Create agents with messaging service injection and unified config
+                # Create 10 agents (SimulationExpert excluded for day trading optimization)
                 self.agents = {
-                    'risk_genius': RiskGenius(self.config_manager.get_dict('agents.risk_genius', {}), config_manager=self.config_manager, messaging_service=self.messaging_service),
-                    'technical_scout': TechnicalScout(self.config_manager.get_dict('agents.technical_scout', {}), config_manager=self.config_manager, messaging_service=self.messaging_service),
-                    'fundamental_analyst': FundamentalAnalyst(self.config_manager.get_dict('agents.fundamental_analyst', {}), config_manager=self.config_manager, messaging_service=self.messaging_service),
-                    'execution_expert': ExecutionExpert(self.config_manager.get_dict('agents.execution_expert', {}), config_manager=self.config_manager, messaging_service=self.messaging_service),
-                    'microstructure_agent': MicrostructureAgent(self.config_manager.get_dict('agents.microstructure_agent', {}), config_manager=self.config_manager, messaging_service=self.messaging_service)
+                    # Core Trading Agents (accept config_manager directly)
+                    'trend_agent': TrendAgent(config_manager=self.config_manager),
+                    'momentum_agent': MomentumAgent(config_manager=self.config_manager),
+                    'risk_genius': RiskGenius(config=None, config_manager=self.config_manager),
+                    'decision_master': DecisionMaster(config=None, config_manager=self.config_manager),
+                    
+                    # Analysis Agents (config + config_manager or config only)
+                    'pattern_master': PatternMaster(config_manager=self.config_manager, config=None),
+                    'indicator_expert': IndicatorExpert(config=None, config_manager=self.config_manager),
+                    
+                    # Specialized Agents (varied signatures)
+                    'session_expert': SessionExpert(config=None, config_manager=self.config_manager),
+                    'pair_specialist': PairSpecialist(config_manager=self.config_manager, config=None),
+                    'execution_expert': ExecutionExpert(config=None, config_manager=self.config_manager, messaging_service=self.messaging_service),
+                    'microstructure_agent': MicrostructureAgent(config=None, config_manager=self.config_manager, messaging_service=self.messaging_service)
                 }
 
                 logger.info(f"✅ Created {len(self.agents)} agents with messaging injection")
@@ -207,6 +223,48 @@ class GeniusAgentCoordinator:
         except Exception as e:
             logger.error(f"❌ Failed to initialize GeniusAgentCoordinator: {e}")
             raise
+
+    async def validate_system_integrity(self) -> Dict[str, Any]:
+        """
+        Validate the integrity of the coordinator and its dependencies.
+        
+        Returns:
+            Dictionary containing status of all critical components
+        """
+        status = {
+            "coordinator_active": self.is_active,
+            "agents_count": len(self.agents),
+            "agents_status": {},
+            "dependencies": {
+                "hierarchy_manager": self.hierarchy_manager is not None,
+                "indicator_engine": self.indicator_engine is not None,
+                "data_manager": self.data_manager is not None,
+                "risk_manager": self.risk_manager is not None,
+                "execution_handler": self.execution_handler is not None,
+                "smart_indicator_executor": self.indicator_executor is not None
+            },
+            "system_health": "HEALTHY"
+        }
+
+        # Check agents
+        for name, agent in self.agents.items():
+            agent_status = "UNKNOWN"
+            if hasattr(agent, "is_ready_for_analysis"):
+                agent_status = "READY" if agent.is_ready_for_analysis() else "NOT_READY"
+            status["agents_status"][name] = agent_status
+
+        # Check critical dependencies
+        if not all(status["dependencies"].values()):
+            status["system_health"] = "DEGRADED"
+            missing = [k for k, v in status["dependencies"].items() if not v]
+            logger.error(f"System integrity check failed. Missing dependencies: {missing}")
+        
+        # Check agent count
+        if len(self.agents) < 5:
+            status["system_health"] = "CRITICAL"
+            logger.error(f"Critical system failure: Only {len(self.agents)} agents available")
+
+        return status
 
     async def start(self):
         """Initialize the coordinator (no longer runs independent loop)."""
@@ -271,32 +329,8 @@ class GeniusAgentCoordinator:
         try:
             logger.info(f"Starting analysis cycle {cycle_id} for {symbol}")
 
-            # Choose execution path based on configuration
-            if self.enable_phase_merging:
-                # Use optimized merged phases
-                await self._execute_merged_phases(cycle_state)
-            else:
-                # Use traditional sequential phases
-                # Phase 1: Initialization and agent hierarchy setup
-                await self._phase_initialization(cycle_state)
-
-                # Phase 2: Data collection
-                await self._phase_data_collection(cycle_state)
-
-                # Phase 3: Indicator calculation
-                await self._phase_indicator_calculation(cycle_state)
-
-                # Phase 4: Agent analysis
-                await self._phase_agent_analysis(cycle_state)
-
-                # Phase 5: Decision synthesis
-                await self._phase_decision_synthesis(cycle_state)
-
-                # Phase 6: Validation
-                await self._phase_validation(cycle_state)
-
-                # Phase 7: Execution preparation
-                await self._phase_execution_preparation(cycle_state)
+            # Execute optimized merged phases
+            await self._execute_merged_phases(cycle_state)
 
             # Mark as completed
             cycle_state.phase = AnalysisCyclePhase.COMPLETED
@@ -376,48 +410,7 @@ class GeniusAgentCoordinator:
         except Exception as e:
             raise CoordinationError(f"Initialization phase failed: {str(e)}")
 
-    async def _phase_data_collection(self, cycle_state: AnalysisCycleState):
-        """Phase 2: Collect all required market data."""
-        cycle_state.phase = AnalysisCyclePhase.DATA_COLLECTION
 
-        try:
-            # Determine required data types from all active agents
-            required_data_types = set()
-            for agent_name in [cycle_state.alpha_agent] + cycle_state.beta_agents + cycle_state.gamma_agents:
-                if agent_name in self.agents:
-                    agent_data_types = self.agents[agent_name].get_required_data_types()
-                    required_data_types.update(agent_data_types)
-
-            # Collect market data from data providers
-            market_data = {}
-            for data_type in required_data_types:
-                try:
-                    data = await self.data_manager.get_data(
-                        data_type=data_type,
-                        symbol=cycle_state.symbol,
-                        timeframe='1H',  # Primary timeframe
-                        limit=500  # Sufficient for most indicators
-                    )
-                    if data is not None and not data.empty:
-                        market_data[data_type] = data
-                    else:
-                        logger.warning(f"No data available for {data_type}")
-
-                except Exception as e:
-                    logger.warning(f"Failed to collect {data_type} data: {str(e)}")
-                    continue
-
-            if not market_data:
-                raise CoordinationError("No market data collected")
-
-            # Store market data in cycle state
-            cycle_state.performance_data['market_data'] = market_data
-            cycle_state.performance_data['data_types_collected'] = list(market_data.keys())
-
-            logger.debug(f"Collected data types: {list(market_data.keys())}")
-
-        except Exception as e:
-            raise CoordinationError(f"Data collection phase failed: {str(e)}")
 
     async def _phase_indicator_calculation(self, cycle_state: AnalysisCycleState):
         """Phase 3: Calculate indicators with tiered approach."""
@@ -725,70 +718,9 @@ class GeniusAgentCoordinator:
                 logger.debug(f"Agent {result['agent_name']} ({result['rank'].value}) "
                             f"completed in {result['duration']:.2f}s")
 
-    async def _phase_decision_synthesis(self, cycle_state: AnalysisCycleState):
-        """Phase 5: Synthesize agent decisions into final trading signal."""
-        cycle_state.phase = AnalysisCyclePhase.DECISION_SYNTHESIS
 
-        try:
-            agent_decisions = cycle_state.agent_decisions
 
-            if not agent_decisions:
-                logger.warning("No agent decisions to synthesize")
-                return
 
-            # Apply hierarchical decision synthesis
-            final_signal = await self._synthesize_hierarchical_decision(
-                agent_decisions=agent_decisions,
-                alpha_agent=cycle_state.alpha_agent,
-                beta_agents=cycle_state.beta_agents,
-                gamma_agents=cycle_state.gamma_agents,
-                symbol=cycle_state.symbol
-            )
-
-            cycle_state.final_signal = final_signal
-
-            if final_signal:
-                logger.info(f"Generated final signal: {final_signal.direction.value} {final_signal.symbol} "
-                          f"(confidence: {final_signal.confidence:.3f})")
-            else:
-                logger.info("No trading signal generated from decision synthesis")
-
-        except Exception as e:
-            raise CoordinationError(f"Decision synthesis phase failed: {str(e)}")
-
-    async def _phase_validation(self, cycle_state: AnalysisCycleState):
-        """Phase 6: Validate the final decision using anti-overfitting framework."""
-        cycle_state.phase = AnalysisCyclePhase.VALIDATION
-
-        try:
-            if not cycle_state.final_signal:
-                logger.debug("No signal to validate")
-                return
-
-            # Validate signal using walk-forward validation principles
-            validation_result = await self._validate_signal_robustness(
-                signal=cycle_state.final_signal,
-                agent_decisions=cycle_state.agent_decisions,
-                market_conditions=cycle_state.market_conditions
-            )
-
-            cycle_state.performance_data['validation_result'] = validation_result
-
-            # Apply validation filters
-            if validation_result and validation_result.get('overfitting_risk', 0) > 0.7:
-                logger.warning("High overfitting risk detected, discarding signal")
-                cycle_state.final_signal = None
-                cycle_state.error_log.append("Signal discarded due to overfitting risk")
-
-            elif validation_result and validation_result.get('robustness_score', 0) < 0.3:
-                logger.warning("Low robustness score, discarding signal")
-                cycle_state.final_signal = None
-                cycle_state.error_log.append("Signal discarded due to low robustness")
-
-        except Exception as e:
-            logger.warning(f"Validation phase failed: {str(e)}")
-            # Don't fail the entire cycle for validation errors
-            cycle_state.error_log.append(f"Validation error: {str(e)}")
 
     async def _phase_execution_preparation(self, cycle_state: AnalysisCycleState):
         """Phase 7: Prepare signal for execution."""
@@ -896,6 +828,10 @@ class GeniusAgentCoordinator:
         try:
             # Start data collection
             essential_data = await self._collect_essential_data(cycle_state)
+            
+            # Initialize market data in performance_data with essential data
+            # This ensures _phase_indicator_calculation has access to data
+            cycle_state.performance_data['market_data'] = essential_data.copy()
 
             # Start indicator calculation as soon as essential data is available
             indicator_task = self._calculate_indicators_incremental(essential_data, cycle_state)
@@ -916,8 +852,11 @@ class GeniusAgentCoordinator:
                 logger.warning(f"Additional data collection failed: {str(additional_data)}")
                 additional_data = {}
 
-            # Merge results
-            cycle_state.performance_data['market_data'] = {**essential_data, **additional_data}
+            # Merge results - Update existing market data with additional data
+            current_market_data = cycle_state.performance_data.get('market_data', {})
+            cycle_state.performance_data['market_data'] = {**current_market_data, **additional_data}
+            
+            # Update indicator results
             cycle_state.performance_data['indicator_results'] = indicator_results
 
             logger.debug("Combined data collection and indicator calculation completed")
@@ -980,7 +919,7 @@ class GeniusAgentCoordinator:
     async def _calculate_indicators_incremental(self, essential_data: Dict, cycle_state: AnalysisCycleState) -> Dict[str, Any]:
         """Calculate indicators incrementally as data becomes available."""
         try:
-            if not essential_data.get('OHLCV') is not None:
+            if essential_data.get('OHLCV') is None:
                 return {}
 
             # Detect market regime quickly using essential data
@@ -989,6 +928,11 @@ class GeniusAgentCoordinator:
 
             # Calculate using the enhanced tiered approach
             cycle_state.phase = AnalysisCyclePhase.INDICATOR_CALCULATION
+            
+            # Ensure market_data is set in cycle_state (redundant check but safe)
+            if 'market_data' not in cycle_state.performance_data:
+                cycle_state.performance_data['market_data'] = essential_data
+                
             await self._phase_indicator_calculation(cycle_state)
             
             return cycle_state.performance_data.get('indicator_results', {})
@@ -1063,28 +1007,7 @@ class GeniusAgentCoordinator:
             logger.warning(f"Validation data preparation failed: {str(e)}")
             return {}
 
-    async def _fast_validation(self, signal, validation_data: Dict[str, Any]):
-        """Fast validation for high-confidence signals."""
-        try:
-            # Quick validation checks
-            if signal.confidence >= 0.9 and validation_data.get('agent_consensus', 0) >= 2:
-                return signal  # Pass through high-confidence signals quickly
 
-            # Apply basic robustness check
-            validation_result = await self._validate_signal_robustness(
-                signal=signal,
-                agent_decisions={},  # Simplified for fast validation
-                market_conditions=validation_data.get('market_conditions')
-            )
-
-            if validation_result and validation_result.get('robustness_score', 0) >= 0.6:
-                return signal
-            else:
-                return None
-
-        except Exception as e:
-            logger.warning(f"Fast validation failed: {str(e)}")
-            return signal  # Return original signal if validation fails
 
     async def _full_validation(self, signal, validation_data: Dict[str, Any]):
         """Full validation for uncertain signals."""

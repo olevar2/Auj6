@@ -37,8 +37,39 @@ from ..regime_detection.regime_classifier import RegimeClassifier
 # Agent and coordination systems
 from ..hierarchy.hierarchy_manager import HierarchyManager
 from ..coordination.genius_agent_coordinator import GeniusAgentCoordinator
+
 # Monitoring system
 from ..monitoring.economic_monitor import EconomicMonitor
+
+# Data providers and market data systems
+from ..data_providers.data_provider_manager import DataProviderManager
+
+# Indicator systems
+from ..optimization.selective_indicator_engine import SelectiveIndicatorEngine
+
+# Trading engine components
+from ..trading_engine.risk_repository import RiskStateRepository
+from ..trading_engine.dynamic_risk_manager import DynamicRiskManager
+from ..trading_engine.execution_handler import ExecutionHandler
+from ..trading_engine.deal_monitoring_teams import DealMonitoringTeams
+
+# Messaging system (assuming location based on common patterns)
+try:
+    from ..messaging.messaging_service_factory import MessagingServiceFactory
+    from ..messaging.messaging_service import MessagingService
+except ImportError:
+    # Fallback if messaging module is in different location
+    try:
+        from ..core.messaging_service_factory import MessagingServiceFactory
+        from ..core.messaging_service import MessagingService
+    except ImportError:
+        MessagingServiceFactory = None
+        MessagingService = None
+        import warnings
+        warnings.warn("MessagingServiceFactory not found, messaging features may be limited")
+
+# Messaging coordinator
+from ..coordination.messaging_coordinator import MessagingCoordinator
 
 
 # ============================================================================
@@ -149,11 +180,16 @@ class PlatformContainer(containers.DeclarativeContainer):
         data_provider_manager=data_provider_manager
     )
 
-    # Messaging system
-    messaging_service = providers.Singleton(
-        MessagingServiceFactory.create_messaging_service,
-        config=config
-    )
+    # Messaging system (only if factory is available)
+    if MessagingServiceFactory is not None:
+        messaging_service = providers.Singleton(
+            MessagingServiceFactory.create_messaging_service,
+            config=config
+        )
+    else:
+        messaging_service = providers.Singleton(
+            lambda config: None  # Placeholder when messaging is not available
+        )
 
     messaging_coordinator = providers.Singleton(
         MessagingCoordinator,
@@ -170,8 +206,7 @@ class PlatformContainer(containers.DeclarativeContainer):
     # Hierarchy management
     hierarchy_manager = providers.Singleton(
         HierarchyManager,
-        config=unified_config_manager,
-        performance_tracker=performance_tracker
+        config=config  # Use config dict instead of config_manager
     )
 
     # Trading engine components
@@ -223,7 +258,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
     """
 
     # Include the platform container
-    platform = providers.DependenciesContainer()
+    platform = providers.Container(PlatformContainer)
 
     # Main application factory
     auj_platform = providers.Factory(

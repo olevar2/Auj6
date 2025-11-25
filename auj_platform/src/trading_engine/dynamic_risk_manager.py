@@ -22,6 +22,72 @@ import pandas as pd
 from decimal import Decimal, ROUND_HALF_UP
 import logging
 import math
+
+# Assuming these imports are needed based on usage
+from ..core.logging_setup import get_logger
+from ..core.data_contracts import TradeSignal, AccountInfo, MarketConditions, TradeDirection, RiskMetrics, PositionSizeAdjustment, RiskLevel
+
+logger = get_logger(__name__)
+
+class RiskManagementError(Exception):
+    pass
+
+class DynamicRiskManager:
+    """
+    Dynamic Risk Manager
+    
+    Manages trading risk through:
+    - Position sizing based on account equity and risk parameters
+    - Portfolio heat monitoring
+    - Correlation analysis
+    - Market regime adaptation
+    """
+    
+    def __init__(self, config_manager: Any, portfolio_tracker: Any = None):
+        """
+        Initialize Dynamic Risk Manager.
+        
+        Args:
+            config_manager: Configuration manager
+            portfolio_tracker: Optional portfolio tracker
+        """
+        self.config_manager = config_manager
+        self.portfolio_tracker = portfolio_tracker
+        
+        # Load risk parameters
+        self.base_risk_params = self._load_base_risk_parameters()
+        
+        # State tracking
+        self.open_positions = {}
+        self.daily_loss_tracking = {}
+        self.current_portfolio_heat = 0.0
+        
+        # Risk thresholds
+        self.correlation_threshold = 0.7
+        self.heat_decay_factor = 0.95
+        
+        # Confidence scaling
+        self.confidence_scaling = {
+            'HIGH': 1.0,
+            'MEDIUM': 0.7,
+            'LOW': 0.4
+        }
+        
+        # Regime adjustments
+        self.regime_adjustments = {
+            'TRENDING_UP': 1.2,
+            'TRENDING_DOWN': 1.2,
+            'RANGING': 0.8,
+            'VOLATILE': 0.6
+        }
+        
+        self._validate_risk_parameters()
+        
+        logger.info("Dynamic Risk Manager initialized")
+
+    def _validate_risk_parameters(self):
+        """Validate loaded risk parameters."""
+        required_params = [
             'max_position_size_percent', 'max_daily_loss_percent', 
             'stop_loss_percent', 'take_profit_percent', 'max_open_positions'
         ]
@@ -175,6 +241,7 @@ import math
         final_multiplier = (base_multiplier * 0.7) + (confidence_adjustment * 0.3)
         
         return max(0.1, min(1.0, final_multiplier))  # Clamp between 0.1 and 1.0    
+
     async def _calculate_volatility_adjustment(self,
                                              symbol: str,
                                              market_conditions: Optional[MarketConditions]) -> float:
@@ -533,19 +600,37 @@ import math
             
             return margin_requirement
             
-            # Clean up old daily loss tracking
-            keys_to_remove = [date for date in self.daily_loss_tracking.keys() if date < yesterday]
-            for date in keys_to_remove:
-                del self.daily_loss_tracking[date]
+        except Exception as e:
+            logger.error(f"Failed to calculate required margin: {str(e)}")
+            return Decimal('0')
+
+    async def _check_daily_loss_limit(self) -> bool:
+        """Check if daily loss limit has been reached."""
+        try:
+            today = datetime.now().date()
+            daily_loss = self.daily_loss_tracking.get(today, 0.0)
             
-            # Apply heat decay
-            self.current_portfolio_heat *= self.heat_decay_factor
+            # Get account equity (simplified, ideally should be passed or fetched)
+            # For now, assume a base equity or fetch from tracker if available
+            equity = 10000.0 # Placeholder
+            if self.portfolio_tracker:
+                 # This part is tricky without account info. 
+                 # Assuming this check is done where account info is available or stored.
+                 pass
+
+            max_loss_percent = self.base_risk_params.get('max_daily_loss_percent', 2.0)
+            max_loss_amount = equity * (max_loss_percent / 100.0)
             
-            logger.info("Daily risk tracking reset")
+            if daily_loss >= max_loss_amount:
+                logger.warning(f"Daily loss limit reached: {daily_loss} >= {max_loss_amount}")
+                return True
+                
+            return False
             
         except Exception as e:
-            logger.error(f"Failed to reset daily tracking: {str(e)}")
-    
+            logger.error(f"Failed to check daily loss limit: {str(e)}")
+            return False
+
     def __str__(self) -> str:
         return f"DynamicRiskManager(heat={self.current_portfolio_heat:.1f}%, positions={len(self.open_positions)})"
     

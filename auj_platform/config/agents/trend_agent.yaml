@@ -1,0 +1,59 @@
+# Trend Agent Configuration
+# This agent specializes in trend identification and strength analysis
+
+agent_name: "TrendAgent"
+specialization: "Trend identification and strength analysis"
+
+# ADX (Average Directional Index) configuration
+adx_period: 14
+adx_strong_trend_threshold: 25
+adx_very_stron_trend_threshold: 50
+
+# Supertrend configuration
+supertrend_period: 10
+supertrend_multiplier: 3.0
+
+# Moving Average configuration
+ma_fast_period: 20
+ma_medium_period: 50
+ma_slow_period: 200
+ma_crossover_confirmation: true
+
+# Trend strength thresholds
+min_trend_strength: 0.5
+strong_trend_threshold: 0.7
+very_strong_trend_threshold: 0.85
+
+# Ichimoku configuration
+ichimoku_conversion_period: 9
+ichimoku_base_period: 26
+ichimoku_lagging_span_period: 52
+ichimoku_displacement: 26
+
+# Parabolic SAR configuration
+psar_acceleration: 0.02
+psar_max_acceleration: 0.2
+
+# Trend confirmation
+require_multiple_timeframe_confirmation: false
+min_confirmations_required: 2
+
+# Signal generation
+trend_agreement_weight_adx: 0.40
+trend_agreement_weight_supertrend: 0.30
+trend_agreement_weight_ma: 0.20
+trend_agreement_weight_ichimoku: 0.10
+
+# Risk parameters
+max_trend_exposure: 0.30  # Maximum portfolio exposure for trend following
+trend_stop_loss_percent: 2.5
+trend_take_profit_percent: 5.0
+
+# Trend reversal detection
+enable_reversal_detection: true
+reversal_confirmation_periods: 3
+
+# Performance tracking
+track_trend_accuracy: true
+adaptive_parameters: true
+parameter_adjustment_period: 30  # days

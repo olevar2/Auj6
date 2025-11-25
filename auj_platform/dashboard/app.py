@@ -127,7 +127,7 @@ except ImportError as e:
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Agent Hierarchy", "Active")
-            st.metric("Alpha Agent", "StrategyExpert")
+            st.metric("Alpha Agent", "TrendAgent")
         with col2:
             st.metric("Market Regime", "TRENDING")
             st.metric("Optimization Score", "8.7/10")
@@ -160,7 +160,7 @@ except ImportError as e:
             st.metric("Profit Factor", "1.45x", "+0.15x")
 
         st.subheader("🎯 Agent Performance")
-        agents = ['StrategyExpert', 'RiskGenius', 'PatternMaster', 'DecisionMaster', 'ExecutionExpert']
+        agents = ['TrendAgent', 'RiskGenius', 'PatternMaster', 'DecisionMaster', 'ExecutionExpert']
         performance = [0.87, 0.82, 0.79, 0.91, 0.85]
 
         fig = px.bar(x=agents, y=performance, title='Agent Performance Scores',
@@ -912,9 +912,9 @@ def dashboard_tab():
 
             # Current AUJ Platform agents
             all_agents = [
-                'StrategyExpert', 'RiskGenius', 'PatternMaster', 'PairSpecialist',
+                'TrendAgent', 'RiskGenius', 'PatternMaster', 'PairSpecialist',
                 'SessionExpert', 'IndicatorExpert', 'ExecutionExpert', 'DecisionMaster',
-                'MicrostructureAgent', 'SimulationExpert'
+                'MicrostructureAgent', 'SimulationExpert', 'MomentumAgent', 'EconomicCalendarAgent'
             ]
 
             for agent in all_agents:
@@ -928,7 +928,7 @@ def dashboard_tab():
         else:
             # Fallback demo status
             demo_agent_status = {
-                'StrategyExpert': 'Alpha',
+                'TrendAgent': 'Alpha',
                 'RiskGenius': 'Active',
                 'PatternMaster': 'Active',
                 'DecisionMaster': 'Active',
@@ -937,7 +937,9 @@ def dashboard_tab():
                 'PairSpecialist': 'Active',
                 'SessionExpert': 'Paused',
                 'MicrostructureAgent': 'Active',
-                'SimulationExpert': 'Active'
+                'SimulationExpert': 'Standby',
+                'MomentumAgent': 'Active',
+                'EconomicCalendarAgent': 'Active'
             }
 
             for agent, status in demo_agent_status.items():
@@ -983,7 +985,7 @@ def dashboard_tab():
                 'Current Price': [1.0875, 198.20, 2365.00, 0.6735],
                 'Unrealized P&L': [125.00, 60.00, 150.00, 45.00],
                 'Grade': ['A', 'B+', 'A-', 'B'],
-                'Agent': ['StrategyExpert', 'PatternMaster', 'DecisionMaster', 'RiskGenius'],
+                'Agent': ['TrendAgent', 'PatternMaster', 'DecisionMaster', 'RiskGenius'],
                 'Confidence': ['87%', '74%', '91%', '83%']
             }
             positions_df = pd.DataFrame(positions_data)
@@ -997,7 +999,7 @@ def dashboard_tab():
             'Current Price': [1.0875, 198.20, 2365.00, 0.6735],
             'Unrealized P&L': [125.00, 60.00, 150.00, 45.00],
             'Grade': ['A', 'B+', 'A-', 'B'],
-            'Agent': ['StrategyExpert', 'PatternMaster', 'DecisionMaster', 'RiskGenius'],
+            'Agent': ['TrendAgent', 'PatternMaster', 'DecisionMaster', 'RiskGenius'],
             'Confidence': ['87%', '74%', '91%', '83%']
         }
         positions_df = pd.DataFrame(positions_data)
@@ -1060,7 +1062,7 @@ def dashboard_tab():
                 st.plotly_chart(fig_confidence, use_container_width=True)
             else:
                 # Fallback demo chart
-                demo_agents = ['StrategyExpert', 'RiskGenius', 'PatternMaster', 'DecisionMaster', 'ExecutionExpert']
+                demo_agents = ['TrendAgent', 'RiskGenius', 'PatternMaster', 'DecisionMaster', 'ExecutionExpert']
                 demo_confidence = [0.87, 0.92, 0.84, 0.93, 0.85]
 
                 fig_confidence = px.bar(
@@ -1093,7 +1095,7 @@ def dashboard_tab():
             else:
                 # Fallback demo data
                 performance_data = {
-                    "Agent": ['StrategyExpert', 'RiskGenius', 'PatternMaster', 'DecisionMaster', 'ExecutionExpert'],
+                    "Agent": ['TrendAgent', 'RiskGenius', 'PatternMaster', 'DecisionMaster', 'ExecutionExpert'],
                     "Win Rate": ['74.2%', '78.5%', '71.3%', '81.7%', '76.9%'],
                     "Profit Factor": ['1.45', '1.52', '1.38', '1.63', '1.41'],
                     "Sharpe Ratio": ['1.23', '1.31', '1.18', '1.42', '1.27'],
@@ -1901,9 +1903,10 @@ def control_tab():
 
         # Mock agent configuration
         agents = [
-            "StrategyExpert", "RiskGenius", "PatternMaster", "PairSpecialist",
+            "TrendAgent", "RiskGenius", "PatternMaster", "PairSpecialist",
             "SessionExpert", "IndicatorExpert", "ExecutionExpert", "DecisionMaster",
-            "MicrostructureAgent", "SimulationExpert"        ]
+            "MicrostructureAgent", "SimulationExpert", "MomentumAgent", "EconomicCalendarAgent"
+        ]
 
         col1, col2 = st.columns(2)
 
@@ -2046,7 +2049,7 @@ def learning_tab():
             st.write(f"• Gamma Agents: {len(hierarchy.get('gamma_agents', []))}")
         else:
             st.write("**Current Hierarchy (Demo):**")
-            st.write("• Alpha: StrategyExpert")
+            st.write("• Alpha: TrendAgent")
             st.write("• Beta Agents: 3")
             st.write("• Gamma Agents: 4")
 
@@ -2163,7 +2166,7 @@ def learning_tab():
 
         # Mock learning logs for demonstration
         learning_logs = [
-            {"time": "2025-06-22 14:30:15", "type": "OPTIMIZATION", "message": "Agent weights updated: StrategyExpert weight increased by 0.05"},
+            {"time": "2025-06-22 14:30:15", "type": "OPTIMIZATION", "message": "Agent weights updated: TrendAgent weight increased by 0.05"},
             {"time": "2025-06-22 14:25:30", "type": "ANALYSIS", "message": "Indicator effectiveness analysis completed: 45 indicators analyzed"},
             {"time": "2025-06-22 14:20:45", "type": "MODEL", "message": "ML model retrained: New market regime classifier deployed"},
             {"time": "2025-06-22 14:15:20", "type": "PERFORMANCE", "message": "Performance improvement detected: +2.3% over last cycle"},
@@ -2391,6 +2394,6 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
     <p>🌟 AUJ Platform - Advanced AI Trading System for Humanitarian Impact 🌟</p>
-    <p>Powered by 10 Specialist AI Agents | 230+ Technical Indicators | Real-time Risk Management</p>
+    <p>Powered by 12 Specialist AI Agents | 230+ Technical Indicators | Real-time Risk Management</p>
 </div>
 """, unsafe_allow_html=True)

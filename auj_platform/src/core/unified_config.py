@@ -452,6 +452,19 @@ class UnifiedConfigManager:
         for path in paths + env_paths:
             if path.exists():
                 existing_paths.append(path)
+        
+        # Auto-discover agent configurations
+        agents_dir = base_path / "config" / "agents"
+        if agents_dir.exists():
+            for agent_config in agents_dir.glob("*.yaml"):
+                existing_paths.append(agent_config)
+                
+        # Also check auj_platform/config/agents
+        agents_dir_alt = base_path / "auj_platform" / "config" / "agents"
+        if agents_dir_alt.exists():
+            for agent_config in agents_dir_alt.glob("*.yaml"):
+                if agent_config not in existing_paths:
+                    existing_paths.append(agent_config)
 
         return existing_paths
 

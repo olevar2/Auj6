@@ -1,42 +1,42 @@
 #!/usr/bin/env python3
 """
-Script لتحديث indicator_data_requirements.py ليدعم MetaApi
+Script to update indicator_data_requirements.py to support MetaApi
 """
 
 import re
 
 def update_indicator_requirements():
-    """تحديث ملف indicator_data_requirements.py"""
+    """Update indicator_data_requirements.py file"""
     
     file_path = "e:/AUJ/auj_platform/config/indicator_data_requirements.py"
     
-    # قراءة الملف
+    # Read the file
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # استبدال "MT5Provider" بـ "MetaApiProvider", "MT5Provider"
-    # هذا يجعل MetaApiProvider أولاً ثم MT5Provider كـ fallback
+    # Replace "MT5Provider" with "MetaApiProvider", "MT5Provider"
+    # This makes MetaApiProvider primary and MT5Provider as fallback
     updated_content = re.sub(
         r'available_providers=\["MT5Provider"',
         r'available_providers=["MetaApiProvider", "MT5Provider"',
         content
     )
     
-    # استبدال "MT5OHLCVProvider" بـ "MetaApiProvider", "MT5OHLCVProvider"  
+    # Replace "MT5OHLCVProvider" with "MetaApiProvider", "MT5OHLCVProvider"  
     updated_content = re.sub(
         r'available_providers=\["MT5OHLCVProvider"',
         r'available_providers=["MetaApiProvider", "MT5OHLCVProvider"',
         updated_content
     )
     
-    # استبدال "MT5TickDataProvider" بـ "MetaApiProvider", "MT5TickDataProvider"
+    # Replace "MT5TickDataProvider" with "MetaApiProvider", "MT5TickDataProvider"
     updated_content = re.sub(
         r'available_providers=\["MT5TickDataProvider"',
         r'available_providers=["MetaApiProvider", "MT5TickDataProvider"',
         updated_content
     )
     
-    # حفظ الملف المحدث
+    # Save the updated file
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(updated_content)
     

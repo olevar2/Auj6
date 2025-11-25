@@ -32,10 +32,11 @@ class PairSpecialist(BaseAgent):
     - Relative strength analysis
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_manager, config: Optional[Dict[str, Any]] = None):
         """Initialize the Pair Specialist Agent."""
         # Load configuration first
-        self.config = self._load_agent_config()
+        self.config = config or self._load_agent_config()
+        self.config_manager = config_manager
 
         assigned_indicators = [
             # Correlation & Relationship Analysis
@@ -60,7 +61,8 @@ class PairSpecialist(BaseAgent):
             name="PairSpecialist",
             specialization="Correlation analysis and pairs trading",
             assigned_indicators=assigned_indicators,
-            config=config
+            config_manager=config_manager,
+            config=self.config
         )
 
         # Configuration parameters

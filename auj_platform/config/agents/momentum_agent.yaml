@@ -1,0 +1,51 @@
+# Momentum Agent Configuration
+# This agent specializes in momentum analysis using various oscillators and indicators
+
+agent_name: "MomentumAgent"
+specialization: "Momentum analysis and oscillator signals"
+
+# Oscillator configuration
+rsi_oversold: 30
+rsi_overbought: 70
+stochastic_oversold: 20
+stochastic_overbought: 80
+
+# MACD configuration
+macd_fast_period: 12
+macd_slow_period: 26
+macd_signal_period: 9
+
+# CCI configuration
+cci_period: 20
+cci_oversold: -100
+cci_overbought: 100
+
+# Williams %R configuration
+williams_r_period: 14
+williams_r_oversold: -80
+williams_r_overbought: -20
+
+# Momentum thresholds
+momentum_strength_threshold: 0.6
+momentum_confirmation_required: true
+
+# Divergence detection
+enable_divergence_detection: true
+divergence_lookback_periods: 14
+
+# Signal generation
+min_oscillator_agreement: 2  # Minimum number of oscillators that must agree
+oscillator_weight_rsi: 0.35
+oscillator_weight_macd: 0.30
+oscillator_weight_stochastic: 0.20
+oscillator_weight_cci: 0.15
+
+# Risk parameters
+max_momentum_exposure: 0.25  # Maximum portfolio exposure for momentum trades
+momentum_stop_loss_percent: 2.0
+momentum_take_profit_percent: 4.0
+
+# Performance tracking
+track_oscillator_performance: true
+adaptive_thresholds: true
+threshold_adjustment_period: 30  # days

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script لتحديث الملفات التابعة لتستخدم MetaApiProvider بدلاً من MT5
+Script to update dependent files to use MetaApiProvider instead of MT5
 """
 
 import os
@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 
 def backup_file(file_path):
-    """إنشاء نسخة احتياطية من الملف"""
+    """Create a backup of the file"""
     backup_path = f"{file_path}.backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     with open(file_path, 'r', encoding='utf-8') as src:
         with open(backup_path, 'w', encoding='utf-8') as dst:
@@ -16,28 +16,28 @@ def backup_file(file_path):
     print(f"✅ Backup created: {backup_path}")
 
 def update_real_order_book_provider():
-    """تحديث real_order_book_provider.py"""
+    """Update real_order_book_provider.py"""
     file_path = "e:/AUJ/auj_platform/src/data_providers/real_order_book_provider.py"
     backup_file(file_path)
     
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # استبدال imports
+    # Replace imports
     content = re.sub(
         r'from \.unified_mt5_provider import UnifiedMT5Provider',
         'from .metaapi_provider import MetaApiProvider',
         content
     )
     
-    # استبدال class instantiation
+    # Replace class instantiation
     content = re.sub(
         r'self\.mt5_provider = UnifiedMT5Provider\(',
         'self.metaapi_provider = MetaApiProvider(',
         content
     )
     
-    # استبدال جميع استخدامات mt5_provider
+    # Replace all mt5_provider usages
     content = re.sub(r'self\.mt5_provider', 'self.metaapi_provider', content)
     content = re.sub(r'mt5_provider', 'metaapi_provider', content)
     
@@ -47,20 +47,21 @@ def update_real_order_book_provider():
     print("✅ Updated real_order_book_provider.py")
 
 def update_real_market_depth_provider():
-    """تحديث real_market_depth_provider.py"""    file_path = "e:/AUJ/auj_platform/src/data_providers/real_market_depth_provider.py"
+    """Update real_market_depth_provider.py"""
+    file_path = "e:/AUJ/auj_platform/src/data_providers/real_market_depth_provider.py"
     backup_file(file_path)
     
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # استبدال imports
+    # Replace imports
     content = re.sub(
         r'from \.unified_mt5_provider import UnifiedMT5Provider',
         'from .metaapi_provider import MetaApiProvider',
         content
     )
     
-    # استبدال class instantiation والاستخدام
+    # Replace class instantiation and usage
     content = re.sub(
         r'self\.mt5_provider = UnifiedMT5Provider\(',
         'self.metaapi_provider = MetaApiProvider(',
@@ -76,28 +77,28 @@ def update_real_market_depth_provider():
     print("✅ Updated real_market_depth_provider.py")
 
 def update_execution_handler():
-    """تحديث execution_handler.py"""
+    """Update execution_handler.py"""
     file_path = "e:/AUJ/auj_platform/src/trading_engine/execution_handler.py"
     backup_file(file_path)
     
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # استبدال imports
+    # Replace imports
     content = re.sub(
         r'from \.\.data_providers\.unified_mt5_provider import UnifiedMT5Provider',
         'from ..data_providers.metaapi_provider import MetaApiProvider',
         content
     )
     
-    # استبدال provider creation
+    # Replace provider creation
     content = re.sub(
         r'mt5_provider = UnifiedMT5Provider\(',
         'metaapi_provider = MetaApiProvider(',
         content
     )
     
-    # استبدال provider usage
+    # Replace provider usage
     content = re.sub(r'mt5_provider', 'metaapi_provider', content)
     content = re.sub(r'"MT5"\] = mt5_provider', '"MetaApi"] = metaapi_provider', content)
     
@@ -107,14 +108,14 @@ def update_execution_handler():
     print("✅ Updated execution_handler.py")
 
 def update_containers():
-    """تحديث containers.py"""
+    """Update containers.py"""
     file_path = "e:/AUJ/auj_platform/src/core/containers.py"
     backup_file(file_path)
     
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # استبدال MT5 provider registration بـ MetaApi
+    # Replace MT5 provider registration with MetaApi
     content = re.sub(
         r'from \.\.data_providers\.unified_mt5_provider import UnifiedMT5Provider',
         'from ..data_providers.metaapi_provider import MetaApiProvider',
@@ -130,14 +131,14 @@ def update_containers():
     print("✅ Updated containers.py")
 
 def update_data_providers_init():
-    """تحديث __init__.py في data_providers"""
+    """Update __init__.py in data_providers"""
     file_path = "e:/AUJ/auj_platform/src/data_providers/__init__.py"
     backup_file(file_path)
     
     with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # إزالة MT5 imports وإضافة MetaApi
+    # Remove MT5 imports and add MetaApi
     content = re.sub(
         r'from \.unified_mt5_provider import UnifiedMT5Provider',
         '# Removed MT5Provider - using MetaApiProvider instead',
@@ -156,7 +157,7 @@ def update_data_providers_init():
         content
     )
     
-    # إضافة MetaApiProvider import إذا لم يكن موجوداً
+    # Add MetaApiProvider import if not present
     if 'from .metaapi_provider import MetaApiProvider' not in content:
         content = content.replace(
             'from .base_provider import BaseDataProvider',
@@ -169,7 +170,7 @@ def update_data_providers_init():
     print("✅ Updated __init__.py")
 
 def main():
-    """تنفيذ جميع التحديثات"""
+    """Execute all updates"""
     print("🔄 Starting dependency updates...")
     
     try:

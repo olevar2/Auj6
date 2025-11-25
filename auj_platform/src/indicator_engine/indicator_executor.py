@@ -55,6 +55,15 @@ from indicator_data_requirements import (
     get_provider_priority_for_indicator
 )
 
+# Import indicator registry for dynamic indicator invocation
+try:
+    from ..registry.indicator_registry import get_indicator_registry
+    REGISTRY_AVAILABLE = True
+except ImportError:
+    REGISTRY_AVAILABLE = False
+    import warnings
+    warnings.warn("IndicatorRegistry not available, falling back to basic calculations")
+
 class ExecutionStatus(Enum):
     """Status codes for indicator execution"""
     SUCCESS = "success"
@@ -196,6 +205,18 @@ class SmartIndicatorExecutor:
         
         # Thread pool for concurrent execution
         self.thread_pool = ThreadPoolExecutor(max_workers=max_concurrent_calculations)
+        
+        # Initialize indicator registry for dynamic indicator invocation
+        self.indicator_registry = None
+        if REGISTRY_AVAILABLE:
+            try:
+                self.indicator_registry = get_indicator_registry()
+                registered_count = len(self.indicator_registry.get_all_indicator_names())
+                self.logger.info(f"✅ IndicatorRegistry initialized with {registered_count} indicators")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize IndicatorRegistry: {e}")
+        else:
+            self.logger.warning("⚠️ IndicatorRegistry not available, using fallback calculations only")
         
         self.logger.info("SmartIndicatorExecutor initialized for maximum trading efficiency")
         self.logger.info("Optimized for MetaAPI cross-platform data access and real-time streaming")
@@ -459,11 +480,55 @@ class SmartIndicatorExecutor:
                                  data: pd.DataFrame,
                                  indicator_req: IndicatorDataRequirement,
                                  periods: int) -> Dict[str, Any]:
-        """Calculate the actual indicator values"""
+        """
+        Calculate the actual indicator values using registered indicator implementations.
         
-        # This is where we would implement or call the actual indicator calculations
-        # For now, we'll implement some basic indicators as examples
+        This method now invokes the actual indicator classes from the indicators directory
+        instead of using placeholder calculations, solving the critical architectural flaw.
+        """
         
+        # Try to use the indicator registry for dynamic invocation
+        if REGISTRY_AVAILABLE:
+            try:
+                registry = get_indicator_registry()
+                
+                # Get indicator instance with configuration
+                indicator_instance = registry.get_indicator_instance(
+                    indicator_name,
+                    period=periods  # Pass periods as default parameter
+                )
+                
+                if indicator_instance and hasattr(indicator_instance, 'calculate'):
+                    # Invoke the actual indicator calculation
+                    result = indicator_instance.calculate(data)
+                    
+                    # Normalize result format to match expected structure
+                    if isinstance(result, dict):
+                        # Extract values from indicator result
+                        indicator_values = result.get('values', {})
+                        current_data = result.get('current', {})
+                        
+                        # Build standardized response
+                        return {
+                            "data": data,  # Original data
+                            "values": {
+                                **indicator_values,
+                                "current": current_data,
+                                "signal": result.get('signal'),
+                                "confidence": result.get('confidence', 0.0),
+                                "indicator_name": indicator_name
+                            }
+                        }
+                    else:
+                        self.logger.warning(f"Indicator {indicator_name} returned non-dict result, using fallback")
+                        
+                else:
+                    self.logger.warning(f"Indicator {indicator_name} not found in registry, using fallback")
+                    
+            except Exception as e:
+                self.logger.warning(f"Failed to calculate {indicator_name} via registry: {e}, using fallback")
+        
+        # Fallback to basic implementations for common indicators
         if indicator_name == "rsi_indicator":
             return await self._calculate_rsi(data, periods)
         elif indicator_name == "macd_indicator":
@@ -475,7 +540,12 @@ class SmartIndicatorExecutor:
         elif indicator_name == "exponential_moving_average_indicator":
             return await self._calculate_ema(data, periods)
         else:
-            # For indicators not yet implemented, return placeholder calculation
+            # Last resort: use enhanced placeholder with warning
+            self.logger.warning(
+                f"⚠️ Indicator {indicator_name} calculation not available. "
+                f"Using basic trend analysis as fallback. "
+                f"Please ensure the indicator is properly registered."
+            )
             return await self._calculate_placeholder(data, indicator_name, periods)
 
     async def _calculate_rsi(self, data: pd.DataFrame, periods: int = 14) -> Dict[str, Any]:

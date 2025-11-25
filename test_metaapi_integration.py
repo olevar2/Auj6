@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-اختبار شامل للمنصة بعد تنظيف MT5 والتحول إلى MetaApi
+Comprehensive platform test after MT5 cleanup and migration to MetaApi
 """
 
 import sys
@@ -8,7 +8,7 @@ import importlib
 import traceback
 
 def test_imports():
-    """اختبار imports الأساسية"""
+    """Test basic imports"""
     print("🔍 Testing basic imports...")
     
     tests = [
@@ -31,18 +31,18 @@ def test_imports():
     return passed == len(tests)
 
 def test_provider_availability():
-    """اختبار توفر MetaApiProvider"""
+    """Test MetaApiProvider availability"""
     print("\n🔍 Testing MetaApiProvider availability...")
     
     try:
         from auj_platform.src.data_providers.data_provider_manager import DataProviderManager
         from auj_platform.config.indicator_data_requirements import PROVIDER_CAPABILITIES
         
-        # اختبار وجود MetaApiProvider في capabilities
+        # Test MetaApiProvider presence in capabilities
         if "MetaApiProvider" in PROVIDER_CAPABILITIES:
             print("✅ MetaApiProvider found in PROVIDER_CAPABILITIES")
             
-            # اختبار إعدادات MetaApiProvider
+            # Test MetaApiProvider settings
             metaapi_config = PROVIDER_CAPABILITIES["MetaApiProvider"]
             print(f"✅ MetaApiProvider priority: {metaapi_config.get('priority', 'Not set')}")
             print(f"✅ MetaApiProvider status: {metaapi_config.get('status', 'Not set')}")
@@ -57,7 +57,7 @@ def test_provider_availability():
         return False
 
 def test_platform_detection():
-    """اختبار platform detection"""
+    """Test platform detection"""
     print("\n🔍 Testing platform detection...")
     
     try:
@@ -67,7 +67,7 @@ def test_platform_detection():
         print(f"✅ Platform detected: {platform_info.get('platform', 'Unknown')}")
         print(f"✅ Recommended providers: {platform_info.get('recommended_providers', [])}")
         
-        # التأكد من أن MetaApiProvider موصى به على Linux
+        # Ensure MetaApiProvider is recommended on Linux
         if platform_info.get('platform') == 'linux':
             recommended = platform_info.get('recommended_providers', [])
             if 'MetaApiProvider' in recommended:
@@ -85,13 +85,13 @@ def test_platform_detection():
         return False
 
 def test_indicator_system():
-    """اختبار نظام المؤشرات"""
+    """Test indicator system"""
     print("\n🔍 Testing indicator system...")
     
     try:
         from auj_platform.config.indicator_data_requirements import get_indicator_requirements
         
-        # اختبار مؤشر بسيط
+        # Test a simple indicator
         sma_req = get_indicator_requirements("SMA")
         if sma_req and "MetaApiProvider" in sma_req.get("available_providers", []):
             print("✅ SMA indicator supports MetaApiProvider")
@@ -105,18 +105,18 @@ def test_indicator_system():
         return False
 
 def run_comprehensive_test():
-    """تشغيل الاختبار الشامل"""
+    """Run comprehensive test"""
     print("🚀 Starting comprehensive platform test...\n")
     
     test_results = []
     
-    # تشغيل جميع الاختبارات
+    # Run all tests
     test_results.append(("Imports", test_imports()))
     test_results.append(("Provider Availability", test_provider_availability()))
     test_results.append(("Platform Detection", test_platform_detection()))
     test_results.append(("Indicator System", test_indicator_system()))
     
-    # تلخيص النتائج
+    # Summarize results
     print(f"\n📊 Test Summary:")
     print(f"=" * 50)
     

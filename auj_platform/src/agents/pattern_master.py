@@ -32,10 +32,11 @@ class PatternMaster(BaseAgent):
     - Fractal pattern detection
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config_manager, config: Optional[Dict[str, Any]] = None):
         """Initialize the Pattern Master Agent."""
         # Load configuration first
-        self.config = self._load_agent_config()
+        self.config = config or self._load_agent_config()
+        self.config_manager = config_manager
 
         # Define assigned indicators for this agent (from registry)
         assigned_indicators = [
@@ -112,7 +113,8 @@ class PatternMaster(BaseAgent):
             name="PatternMaster",
             specialization="All forms of pattern recognition and wave analysis",
             assigned_indicators=assigned_indicators,
-            config=config
+            config_manager=config_manager,
+            config=self.config
         )
 
         # Load configuration from YAML file
