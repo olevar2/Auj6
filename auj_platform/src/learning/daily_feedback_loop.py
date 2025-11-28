@@ -12,6 +12,10 @@ Every day at 22:00 UTC (end-of-day), before the next daily cycle:
 
 This ensures the platform continuously evolves while preventing overfitting.
 The coordinator continues to perform lightweight hourly exploratory scans independently.
+
+FIXES IMPLEMENTED:
+- Added missing RegimeClassifier import (was causing error on line 138)
+- Added self.database initialization (was undefined in _initialize_database)
 """
 
 import asyncio
@@ -46,6 +50,7 @@ from ..learning.agent_behavior_optimizer import AgentBehaviorOptimizer
 from ..hierarchy.hierarchy_manager import HierarchyManager
 from ..coordination.genius_agent_coordinator import GeniusAgentCoordinator
 from ..monitoring.economic_monitor import EconomicMonitor
+from ..regime_detection.regime_classifier import RegimeClassifier  # FIXED: Added missing import
 
 
 class FeedbackLoopPhase(str, Enum):
@@ -170,6 +175,9 @@ class DailyFeedbackLoop:
         self.database_path = database_path or "data/feedback_loop.db"
         self.config = config or {}
         
+        # FIXED: Initialize database connection
+        self.database = get_unified_database()
+        
         # Daily loop parameters (changed from hourly)
         self.daily_execution_time = time(22, 0)  # 22:00 UTC end-of-day
         self.safety_check_enabled = self.config_manager.get_bool('safety_check_enabled', True)
@@ -270,7 +278,10 @@ class DailyFeedbackLoop:
                     stability_score REAL,
                     active_agents INTEGER,
                     elite_indicators_count INTEGER,
-                    market_regime TEXT
+                    market_regime TEXT,
+                    comprehensive_analysis_rate REAL,
+                    analysis_consistency_score REAL,
+                    full_validation_rate REAL
                 )
             """, use_cache=False)
             
@@ -297,32 +308,32 @@ class DailyFeedbackLoop:
         """Load historical performance metrics."""
         try:
             # Using unified database manager instead of direct sqlite3
-                # Load recent performance trends
-                cursor = self.database.execute_query_sync("""
-                    SELECT overall_performance, overfitting_risk 
-                    FROM performance_trends 
-                    ORDER BY timestamp DESC 
-                    LIMIT 100
-                """, use_cache=False)
+            # Load recent performance trends
+            cursor = self.database.execute_query_sync("""
+                SELECT overall_performance, overfitting_risk 
+                FROM performance_trends 
+                ORDER BY timestamp DESC 
+                LIMIT 100
+            """, use_cache=False)
+            
+            for row in cursor.fetchall():
+                self.system_performance_history.append(row[0])
+                self.overfitting_risk_history.append(row[1])
+            
+            # Load last execution time
+            cursor = self.database.execute_query_sync("""
+                SELECT timestamp FROM feedback_loop_executions 
+                ORDER BY timestamp DESC 
+                LIMIT 1
+            """, use_cache=False)
+            
+            result = cursor.fetchone()
+            if result:
+                self.last_execution = datetime.fromisoformat(result[0])
                 
-                for row in cursor.fetchall():
-                    self.system_performance_history.append(row[0])
-                    self.overfitting_risk_history.append(row[1])
-                
-                # Load last execution time
-                cursor = self.database.execute_query_sync("""
-                    SELECT timestamp FROM feedback_loop_executions 
-                    ORDER BY timestamp DESC 
-                    LIMIT 1
-                """, use_cache=False)
-                
-                result = cursor.fetchone()
-                if result:
-                    self.last_execution = datetime.fromisoformat(result[0])
-                    
-                # Calculate next execution time
-                self.next_execution = self._calculate_next_execution_time()
-                
+            # Calculate next execution time
+            self.next_execution = self._calculate_next_execution_time()
+            
         except Exception as e:
             self.logger.warning(f"Failed to load historical metrics: {str(e)}")
             self.next_execution = self._calculate_next_execution_time()
@@ -478,7 +489,8 @@ class DailyFeedbackLoop:
             )
             
             await self._save_execution_metrics(error_metrics)
-            return error_metrics    
+            return error_metrics
+    
     async def _phase_initialization(self):
         """Initialize the daily feedback loop cycle."""
         self.logger.info("Phase 1: Initialization")
@@ -866,7 +878,8 @@ class DailyFeedbackLoop:
                 'overfitting_risk': 1.0,
                 'active_agents': 0,
                 'system_health': 'ERROR'
-            }    
+            }
+    
     async def _execute_economic_monitoring(self):
         """Execute economic monitoring cycle."""
         try:
@@ -1019,10 +1032,11 @@ class DailyFeedbackLoop:
                 self.current_loop_id,
                 datetime.utcnow().isoformat(),
                 current_regime.value,
-                json.dumps({k: v.value for k, v in agent_rankings.items()}),
+                json.dumps({k: v.value if hasattr(v, 'value') else v for k, v in agent_rankings.items()}),
                 json.dumps(elite_indicators),
                 json.dumps(performance_metrics)
             ), use_cache=False)
+            
             # Update last successful state
             self.last_successful_state = {
                 'snapshot_id': snapshot_id,

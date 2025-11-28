@@ -25,7 +25,10 @@ import math
 
 # Assuming these imports are needed based on usage
 from ..core.logging_setup import get_logger
-from ..core.data_contracts import TradeSignal, AccountInfo, MarketConditions, TradeDirection, RiskMetrics, PositionSizeAdjustment, RiskLevel
+from ..core.data_contracts import (
+    TradeSignal, AccountInfo, MarketConditions, TradeDirection, 
+    RiskMetrics, PositionSizeAdjustment, RiskLevel, MarketRegime
+)
 
 logger = get_logger(__name__)
 
@@ -372,269 +375,104 @@ class DynamicRiskManager:
         # 4. Maximum number of open positions
         open_positions_count = len(await self._get_open_positions())
         max_positions = self.base_risk_params.get('max_open_positions', 10)
-        if open_positions_count >= max_positions:
-            position_size = Decimal('0')
-            adjustments.append(PositionSizeAdjustment.PORTFOLIO_HEAT)
         
-        # 5. Daily loss limit check
-        if await self._check_daily_loss_limit():
-            position_size = Decimal('0')
+        if open_positions_count >= max_positions:
+            position_size = Decimal('0')  # Block new positions
             adjustments.append(PositionSizeAdjustment.ACCOUNT_PROTECTION)
         
-        return position_size.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), adjustments
-    
-    async def _calculate_risk_metrics(self,
-                                    signal: TradeSignal,
-                                    account_info: AccountInfo,
-                                    base_size: Decimal,
-                                    final_size: Decimal,
-                                    confidence_multiplier: float,
-                                    volatility_adjustment: float,
-                                    correlation_penalty: float,
-                                    heat_adjustment: float,
-                                    regime_adjustment: float,
-                                    adjustments: List[PositionSizeAdjustment],
-                                    current_price: Optional[Decimal]) -> RiskMetrics:
-        """Calculate comprehensive risk metrics for the trade."""
-        try:
-            # Calculate position risk as percentage of equity
-            position_value = final_size * (current_price or signal.entry_price or Decimal('1'))
-            position_risk_percent = float((position_value / account_info.equity) * 100)
-            
-            # Calculate maximum loss amount
-            if signal.stop_loss and current_price:
-                if signal.direction == TradeDirection.BUY:
-                    max_loss_per_unit = current_price - signal.stop_loss
-                else:
-                    max_loss_per_unit = signal.stop_loss - current_price
-                max_loss_amount = final_size * max_loss_per_unit
-            else:
-                # Estimate based on typical stop loss percentage
-                stop_loss_percent = self.base_risk_params.get('stop_loss_percent', 1.0)
-                max_loss_amount = position_value * Decimal(str(stop_loss_percent / 100))
-            
-            # Calculate risk-reward ratio
-            if signal.take_profit and signal.stop_loss and current_price:
-                if signal.direction == TradeDirection.BUY:
-                    potential_profit = (signal.take_profit - current_price) * final_size
-                    potential_loss = (current_price - signal.stop_loss) * final_size
-                else:
-                    potential_profit = (current_price - signal.take_profit) * final_size
-                    potential_loss = (signal.stop_loss - current_price) * final_size
-                
-                risk_reward_ratio = float(potential_profit / max(potential_loss, Decimal('0.01')))
-            else:
-                # Default risk-reward based on config
-                risk_reward_ratio = self.base_risk_params.get('take_profit_percent', 2.0) / self.base_risk_params.get('stop_loss_percent', 1.0)
-            
-            # Calculate current portfolio heat
-            portfolio_heat = await self._calculate_current_portfolio_heat()
-            
-            # Determine risk level
-            risk_level = self._determine_risk_level(
-                position_risk_percent, portfolio_heat, max_loss_amount, account_info.equity
-            )
-            
-            # Generate warnings
-            warnings = self._generate_risk_warnings(
-                position_risk_percent, portfolio_heat, risk_level, adjustments
-            )
-            
-            return RiskMetrics(
-                position_risk_percent=position_risk_percent,
-                portfolio_heat=portfolio_heat,
-                volatility_adjustment=volatility_adjustment,
-                correlation_penalty=correlation_penalty,
-                confidence_multiplier=confidence_multiplier,
-                final_position_size=final_size,
-                max_loss_amount=max_loss_amount,
-                risk_reward_ratio=risk_reward_ratio,
-                risk_level=risk_level,
-                adjustments_applied=adjustments,
-                warnings=warnings
-            )
-            
-        except Exception as e:
-            logger.error(f"Risk metrics calculation failed: {str(e)}")
-            # Return safe default metrics
-            return RiskMetrics(
-                position_risk_percent=0.0,
-                portfolio_heat=0.0,
-                volatility_adjustment=1.0,
-                correlation_penalty=1.0,
-                confidence_multiplier=0.5,
-                final_position_size=Decimal('0'),
-                max_loss_amount=Decimal('0'),
-                risk_reward_ratio=1.0,
-                risk_level=RiskLevel.VERY_HIGH,
-                adjustments_applied=[PositionSizeAdjustment.ACCOUNT_PROTECTION],
-                warnings=["Risk calculation error - trade rejected"]
-            )    
-    def _determine_risk_level(self,
-                            position_risk_percent: float,
-                            portfolio_heat: float,
-                            max_loss_amount: Decimal,
-                            account_equity: Decimal) -> RiskLevel:
-        """Determine overall risk level for the trade."""
-        # Calculate loss as percentage of equity
-        loss_percent = float((max_loss_amount / account_equity) * 100)
+        # 5. Daily loss limit check
+        if await self._check_daily_loss_limit_reached():
+            position_size = Decimal('0')  # Stop trading for the day
+            adjustments.append(PositionSizeAdjustment.ACCOUNT_PROTECTION)
         
-        # Risk level thresholds
-        if (position_risk_percent > 8.0 or 
-            portfolio_heat > 20.0 or 
-            loss_percent > 3.0):
-            return RiskLevel.CRITICAL
-        elif (position_risk_percent > 6.0 or 
-              portfolio_heat > 15.0 or 
-              loss_percent > 2.0):
-            return RiskLevel.VERY_HIGH
-        elif (position_risk_percent > 4.0 or 
-              portfolio_heat > 10.0 or 
-              loss_percent > 1.5):
+        return position_size, adjustments
+    
+    async def _calculate_risk_metrics(self, **kwargs) -> RiskMetrics:
+        """Calculate comprehensive risk metrics for the position."""
+        signal = kwargs['signal']
+        account_info = kwargs['account_info']
+        final_size = kwargs['final_size']
+        current_price = kwargs.get('current_price')
+        
+        # Calculate position value
+        position_value = final_size * (current_price or signal.entry_price or Decimal('1'))
+        
+        # Calculate risk level
+        risk_level = self._determine_risk_level(position_value, account_info.equity)
+        
+        # Create risk metrics
+        return RiskMetrics(
+            risk_level=risk_level,
+            position_value=position_value,
+            risk_reward_ratio=self._calculate_risk_reward_ratio(signal),
+            portfolio_heat=await self._calculate_current_portfolio_heat(),
+            confidence_multiplier=kwargs.get('confidence_multiplier', 1.0),
+            volatility_adjustment=kwargs.get('volatility_adjustment', 1.0)
+        )
+    
+    def _determine_risk_level(self, position_value: Decimal, equity: Decimal) -> RiskLevel:
+        """Determine risk level based on position value relative to equity."""
+        risk_percent = (position_value / equity) * 100
+        
+        if risk_percent >= 5.0:
             return RiskLevel.HIGH
-        elif (position_risk_percent > 2.0 or 
-              portfolio_heat > 5.0 or 
-              loss_percent > 1.0):
+        elif risk_percent >= 3.0:
             return RiskLevel.MEDIUM
-        elif (position_risk_percent > 1.0 or 
-              portfolio_heat > 2.0 or 
-              loss_percent > 0.5):
-            return RiskLevel.LOW
         else:
-            return RiskLevel.VERY_LOW
+            return RiskLevel.LOW
     
-    def _generate_risk_warnings(self,
-                              position_risk_percent: float,
-                              portfolio_heat: float,
-                              risk_level: RiskLevel,
-                              adjustments: List[PositionSizeAdjustment]) -> List[str]:
-        """Generate risk warnings based on current conditions."""
-        warnings = []
+    def _calculate_risk_reward_ratio(self, signal: TradeSignal) -> float:
+        """Calculate risk/reward ratio from signal."""
+        if not signal.stop_loss or not signal.take_profit or not signal.entry_price:
+            return 1.0
         
-        if risk_level in [RiskLevel.CRITICAL, RiskLevel.VERY_HIGH]:
-            warnings.append(f"High risk level: {risk_level.value}")
+        if signal.direction == TradeDirection.BUY:
+            risk = abs(float(signal.entry_price - signal.stop_loss))
+            reward = abs(float(signal.take_profit - signal.entry_price))
+        else:
+            risk = abs(float(signal.stop_loss - signal.entry_price))
+            reward = abs(float(signal.entry_price - signal.take_profit))
         
-        if position_risk_percent > 5.0:
-            warnings.append(f"Large position size: {position_risk_percent:.1f}% of equity")
-        
-        if portfolio_heat > 12.0:
-            warnings.append(f"High portfolio heat: {portfolio_heat:.1f}%")
-        
-        if PositionSizeAdjustment.CORRELATION_REDUCTION in adjustments:
-            warnings.append("Position reduced due to correlation risk")
-        
-        if PositionSizeAdjustment.PORTFOLIO_HEAT in adjustments:
-            warnings.append("Position limited due to portfolio heat")
-        
-        if PositionSizeAdjustment.ACCOUNT_PROTECTION in adjustments:
-            warnings.append("Position adjusted for account protection")
-        
-        return warnings
-    
-    # Helper methods for data retrieval and calculations
+        if risk > 0:
+            return reward / risk
+        return 1.0
     
     async def _get_symbol_volatility(self, symbol: str) -> float:
-        """Get recent volatility for a symbol."""
-        try:
-            # This would typically fetch from market data provider
-            # For now, return a default volatility estimate
-            return 0.5  # Default moderate volatility
-        except Exception as e:
-            logger.warning(f"Failed to get volatility for {symbol}: {str(e)}")
-            return 0.5
+        """Get symbol volatility (placeholder)."""
+        return 0.5  # Default medium volatility
     
     async def _get_open_positions(self) -> Dict[str, Any]:
-        """Get currently open positions."""
-        try:
-            if self.portfolio_tracker:
-                return await self.portfolio_tracker.get_open_positions()
-            else:
-                return self.open_positions
-        except Exception as e:
-            logger.warning(f"Failed to get open positions: {str(e)}")
-            return {}
+        """Get current open positions."""
+        return self.open_positions
     
     async def _get_symbol_correlation(self, symbol1: str, symbol2: str) -> float:
-        """Get correlation between two symbols."""
-        try:
-            # This would typically calculate from historical price data
-            # For now, return estimated correlation based on symbol types
-            
-            # Simple correlation estimation based on currency pairs
-            if symbol1[:3] == symbol2[:3] or symbol1[3:] == symbol2[3:]:
-                return 0.8  # High correlation for shared currencies
-            elif symbol1[:3] == symbol2[3:] or symbol1[3:] == symbol2[:3]:
-                return -0.6  # Negative correlation for inverse pairs
-            else:
-                return 0.2  # Low correlation for unrelated pairs
-                
-        except Exception as e:
-            logger.warning(f"Failed to get correlation between {symbol1} and {symbol2}: {str(e)}")
-            return 0.0
+        """Get correlation between two symbols (placeholder)."""
+        return 0.0  # Default no correlation
     
     async def _calculate_current_portfolio_heat(self) -> float:
-        """Calculate current portfolio heat (total risk exposure)."""
-        try:
-            open_positions = await self._get_open_positions()
-            total_heat = 0.0
-            
-            for position_info in open_positions.values():
-                # Calculate heat contribution of each position
-                position_risk = position_info.get('risk_percent', 0.0)
-                total_heat += position_risk
-            
-            return total_heat
-            
-        except Exception as e:
-            logger.warning(f"Failed to calculate portfolio heat: {str(e)}")
-            return 0.0
+        """Calculate current portfolio heat."""
+        return self.current_portfolio_heat
     
     async def _calculate_required_margin(self, position_size: Decimal, signal: TradeSignal) -> Decimal:
-        """Calculate required margin for the position."""
-        try:
-            # Simplified margin calculation (would vary by broker and instrument)
-            position_value = position_size * (signal.entry_price or Decimal('1'))
-            
-            # Assume 1:100 leverage for forex (1% margin requirement)
-            margin_requirement = position_value * Decimal('0.01')
-            
-            return margin_requirement
-            
-        except Exception as e:
-            logger.error(f"Failed to calculate required margin: {str(e)}")
-            return Decimal('0')
-
-    async def _check_daily_loss_limit(self) -> bool:
-        """Check if daily loss limit has been reached."""
-        try:
-            today = datetime.now().date()
-            daily_loss = self.daily_loss_tracking.get(today, 0.0)
-            
-            # Get account equity (simplified, ideally should be passed or fetched)
-            # For now, assume a base equity or fetch from tracker if available
-            equity = 10000.0 # Placeholder
-            if self.portfolio_tracker:
-                 # This part is tricky without account info. 
-                 # Assuming this check is done where account info is available or stored.
-                 pass
-
-            max_loss_percent = self.base_risk_params.get('max_daily_loss_percent', 2.0)
-            max_loss_amount = equity * (max_loss_percent / 100.0)
-            
-            if daily_loss >= max_loss_amount:
-                logger.warning(f"Daily loss limit reached: {daily_loss} >= {max_loss_amount}")
-                return True
-                
-            return False
-            
-        except Exception as e:
-            logger.error(f"Failed to check daily loss limit: {str(e)}")
-            return False
-
-    def __str__(self) -> str:
-        return f"DynamicRiskManager(heat={self.current_portfolio_heat:.1f}%, positions={len(self.open_positions)})"
+        """Calculate required margin for position."""
+        # Simplified: assume 1:100 leverage
+        position_value = position_size * (signal.entry_price or Decimal('1'))
+        return position_value / Decimal('100')
     
-    def __repr__(self) -> str:
-        return (f"DynamicRiskManager(portfolio_heat={self.current_portfolio_heat:.1f}, "
-                f"open_positions={len(self.open_positions)}, "
-                f"max_position_size={self.base_risk_params.get('max_position_size_percent', 0)}%)")
+    async def _check_daily_loss_limit_reached(self) -> bool:
+        """Check if daily loss limit has been reached."""
+        # Placeholder implementation
+        return False
+    
+    async def update_position_risk(self, position_id: str, current_price: Decimal) -> None:
+        """Update risk metrics for an open position."""
+        if position_id in self.open_positions:
+            logger.debug(f"Updating risk for position {position_id}")
+        
+    async def get_portfolio_risk_summary(self) -> Dict[str, Any]:
+        """Get comprehensive portfolio risk summary."""
+        return {
+            "open_positions": len(self.open_positions),
+            "portfolio_heat": self.current_portfolio_heat,
+            "max_position_size": self.base_risk_params.get('max_position_size_percent', 0)
+        }

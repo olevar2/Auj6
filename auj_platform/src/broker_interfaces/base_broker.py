@@ -17,18 +17,20 @@ class BaseBroker(ABC):
     Defines the standard interface that all broker implementations must follow.
     """
     
-    def __init__(self, config: Dict[str, Any]):
-        # Note: This class now requires config_manager parameter in __init__
-        # self.config_manager = config_manager or UnifiedConfigManager()
+    def __init__(self, config: Dict[str, Any], config_manager=None):
         """
         Initialize broker interface.
         
         Args:
             config: Broker-specific configuration
+            config_manager: Optional UnifiedConfigManager instance
         """
+        from ..core.unified_config import get_unified_config
+        
         self.config = config
+        self.config_manager = config_manager or get_unified_config()
         self.connected = False
-        self.enabled = self.config_manager.get_bool('enabled', False)
+        self.enabled = self.config_manager.get_bool('broker.enabled', False)
     
     @abstractmethod
     async def initialize(self) -> bool:

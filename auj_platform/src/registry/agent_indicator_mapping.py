@@ -1,20 +1,13 @@
 """
 Agent Indicator Mapping Registry for AUJ Platform.
 
-This module defines the comple            "zig_zag_indicator",
-              "linear_regression_channels_indicator",
-            "rsquared_indicator",
-            "skewness_indicator",
-            "standard_deviation_channels_indicator",
-            "variance_ratio_indicator",
-            "zscore_indicator"
-        ],
-        "indicator_count": 23, "zone_indicator"
-        ],
-        "indicator_count": 29,apping between agents and their assigned indicators,
+This module defines the complete mapping between agents and their assigned indicators,
 including exact roles and tools for each of the 10 expert agents.
 
 UPDATED: Now contains only real indicators that actually exist in the platform.
+
+FIXES IMPLEMENTED:
+- Fixed corrupted module docstring (lines 4-14 had code fragments and broken text)
 """
 
 from typing import Dict, List, Any
@@ -105,7 +98,7 @@ AGENT_MAPPINGS = {
             "relative_volatility_index_indicator",
             "ulcer_index_indicator",
 
-            # ALL Statistical Risk Indicators (8)
+            # ALL Statistical Risk Indicators (9)
             "autocorrelation_indicator",
             "garch_volatility_model_indicator",
             "hurst_exponent_indicator",

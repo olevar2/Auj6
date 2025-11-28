@@ -3,9 +3,14 @@ Economic Calendar Agent Implementation for AUJ Platform.
 
 This module contains specialized agents that integrate economic calendar data
 into their market analysis and trading decisions.
+
+FIXES IMPLEMENTED:
+- Fixed config_manager initialization in __init__
+- Removed confusing commented code
+- Ensured proper parent class initialization
 """
 
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 import pandas as pd
 from decimal import Decimal
@@ -27,6 +32,8 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
     
     This class extends the base agent to include economic calendar data
     in market analysis and decision-making processes.
+    
+    FIXED: Proper config_manager initialization via parent class
     """
     
     def __init__(self, 
@@ -34,8 +41,6 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
                  assigned_indicators: List[str],
                  config: Dict[str, Any],
                  economic_provider: Optional[UnifiedNewsEconomicProvider] = None):
-        # Note: This class now requires config_manager parameter in __init__
-        # self.config_manager = config_manager or UnifiedConfigManager()
         """
         Initialize economic calendar enhanced agent.
         
@@ -45,6 +50,7 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
             config: Agent configuration
             economic_provider: Economic calendar data provider
         """
+        # FIXED: Parent class initialization provides config_manager
         super().__init__(name, assigned_indicators, config)
         
         self.economic_provider = economic_provider or UnifiedNewsEconomicProvider()
@@ -53,7 +59,7 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
         # Initialize economic indicators if available
         self._initialize_economic_indicators()
         
-        # Economic analysis configuration
+        # FIXED: Now config_manager is properly available from parent class
         self.economic_config = self.config_manager.get_dict('economic_analysis', {
             'lookback_hours': 24,
             'lookahead_hours': 8,
@@ -157,7 +163,7 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
                 total_events = 0
                 
                 for event in context['high_impact_recent']:
-                    if event['actual'] and event['forecast']:
+                    if event.get('actual') and event.get('forecast'):
                         if event['actual'] > event['forecast']:
                             positive_events += 1
                         total_events += 1
@@ -202,7 +208,7 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
             # Adjust confidence based on economic events
             economic_confidence_adjustment = 0.0
             
-            if economic_context['high_impact_upcoming']:
+            if economic_context.get('high_impact_upcoming'):
                 # Reduce confidence if major events are upcoming
                 upcoming_hours = min([e['hours_until'] for e in economic_context['high_impact_upcoming']])
                 if upcoming_hours < 2:
@@ -210,7 +216,7 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
                 elif upcoming_hours < 6:
                     economic_confidence_adjustment -= 0.15
             
-            if economic_context['high_impact_recent']:
+            if economic_context.get('high_impact_recent'):
                 # Adjust based on recent event outcomes
                 recent_hours = min([e['hours_ago'] for e in economic_context['high_impact_recent']])
                 if recent_hours < 1:
@@ -233,8 +239,7 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
                     economic_confidence_adjustment -= 0.2
             
             # Apply volatility expectations
-            if economic_context['volatility_expectation'] == 'HIGH':
-                # Adjust position sizing recommendations
+            if economic_context.get('volatility_expectation') == 'HIGH':
                 enhanced_analysis['position_size_multiplier'] = 0.7  # Reduce position size
                 enhanced_analysis['stop_loss_multiplier'] = 1.5     # Wider stops
                 
@@ -246,11 +251,11 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
             # Add economic analysis section
             enhanced_analysis['economic_analysis'] = {
                 'bias': economic_context['economic_bias'],
-                'volatility_expectation': economic_context['volatility_expectation'],
+                'volatility_expectation': economic_context.get('volatility_expectation', 'NORMAL'),
                 'confidence_adjustment': economic_confidence_adjustment,
-                'recent_events_count': len(economic_context['high_impact_recent']),
-                'upcoming_events_count': len(economic_context['high_impact_upcoming']),
-                'economic_confidence': economic_context['confidence']
+                'recent_events_count': len(economic_context.get('high_impact_recent', [])),
+                'upcoming_events_count': len(economic_context.get('high_impact_upcoming', [])),
+                'economic_confidence': economic_context.get('confidence', 0.5)
             }
             
             return enhanced_analysis
@@ -263,11 +268,12 @@ class EconomicCalendarEnhancedAgent(BaseAgent):
 class EconomicSessionExpert(EconomicCalendarEnhancedAgent):
     """
     Enhanced SessionExpert agent with economic calendar integration.
+    
+    FIXED: Proper parent class initialization
     """
     
     def __init__(self, config: Dict[str, Any]):
-        # Note: This class now requires config_manager parameter in __init__
-        # self.config_manager = config_manager or UnifiedConfigManager()
+        """Initialize EconomicSessionExpert."""
         assigned_indicators = [
             "session_analysis_indicator",
             "session_volume_profile_indicator",
@@ -285,9 +291,7 @@ class EconomicSessionExpert(EconomicCalendarEnhancedAgent):
                            symbol: str, 
                            market_data: pd.DataFrame, 
                            market_conditions: MarketConditions) -> AnalysisResult:
-        """
-        Analyze market with session timing and economic calendar integration.
-        """
+        """Analyze market with session timing and economic calendar integration."""
         try:
             # Get economic context
             economic_context = await self.get_economic_context(symbol)
@@ -322,9 +326,6 @@ class EconomicSessionExpert(EconomicCalendarEnhancedAgent):
                                 market_data: pd.DataFrame, 
                                 market_conditions: MarketConditions) -> Dict[str, Any]:
         """Perform base session analysis."""
-        # This would contain the actual session analysis logic
-        # For now, returning a simplified analysis structure
-        
         current_time = datetime.utcnow()
         
         return {
@@ -388,11 +389,12 @@ class EconomicSessionExpert(EconomicCalendarEnhancedAgent):
 class EconomicRiskGenius(EconomicCalendarEnhancedAgent):
     """
     Enhanced RiskGenius agent with economic volatility prediction.
+    
+    FIXED: Proper parent class initialization
     """
     
     def __init__(self, config: Dict[str, Any]):
-        # Note: This class now requires config_manager parameter in __init__
-        # self.config_manager = config_manager or UnifiedConfigManager()
+        """Initialize EconomicRiskGenius."""
         assigned_indicators = [
             "average_true_range_indicator",
             "bollinger_bands_indicator",
@@ -407,9 +409,7 @@ class EconomicRiskGenius(EconomicCalendarEnhancedAgent):
                            symbol: str, 
                            market_data: pd.DataFrame, 
                            market_conditions: MarketConditions) -> AnalysisResult:
-        """
-        Analyze market with enhanced volatility and economic risk assessment.
-        """
+        """Analyze market with enhanced volatility and economic risk assessment."""
         try:
             # Get economic context for volatility prediction
             economic_context = await self.get_economic_context(symbol, lookback_hours=48, lookahead_hours=24)
@@ -452,7 +452,9 @@ class EconomicRiskGenius(EconomicCalendarEnhancedAgent):
             'current_volatility': 0.15,
             'historical_volatility': 0.12,
             'volatility_trend': 'INCREASING',
-            'volatility_percentile': 75
+            'volatility_percentile': 75,
+            'signal': 'HOLD',
+            'confidence': 0.6
         }
     
     def _predict_economic_volatility(self, economic_context: Dict[str, Any]) -> Dict[str, Any]:

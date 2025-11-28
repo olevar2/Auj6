@@ -3,6 +3,9 @@ Profit Forecasting Engine for the AUJ Platform.
 
 This module provides profit and loss forecasting capabilities using time-series
 analysis and machine learning models to predict future performance of trading agents.
+
+FIXES IMPLEMENTED:
+- Fixed deprecated pandas fillna(method='bfill') → replaced with bfill()
 """
 
 import asyncio
@@ -253,8 +256,8 @@ class ProfitForecastingEngine:
             # Add volatility measure
             df['pnl_volatility'] = df['pnl'].rolling(window=5).std()
             
-            # Fill NaN values
-            df = df.fillna(method='bfill').fillna(0)
+            # FIXED: Fill NaN values using modern pandas API (replaced deprecated fillna(method='bfill'))
+            df = df.bfill().fillna(0)
             
             return df
             

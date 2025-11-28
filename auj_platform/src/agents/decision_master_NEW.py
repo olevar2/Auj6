@@ -430,7 +430,9 @@ class DecisionMaster(BaseAgent):
 
     def get_minimum_data_points(self) -> int:
         """Define minimum data points needed."""
-        return 1  # Needs current agent decisions    def _assess_data_availability(self, market_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+        return 1  # Needs current agent decisions
+
+    def _assess_data_availability(self, market_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
         """Assess quality and availability of different data sources for AI processing."""
         data_availability = {
             "ohlcv_available": False,
@@ -746,6 +748,7 @@ class DecisionMaster(BaseAgent):
         stability = max(0.0, min(1.0, 1.0 - (volatility * 50)))
 
         return stability
+
     def _prepare_ensemble_features(self, indicator_results: Dict[str, Any], consensus_analysis: Dict[str, Any], portfolio_analysis: Dict[str, Any]) -> pd.DataFrame:
         """Prepare features for AI ensemble training and prediction."""
         features = {}
@@ -772,66 +775,6 @@ class DecisionMaster(BaseAgent):
         # Convert to DataFrame
         return pd.DataFrame([features])
 
-    def _analyze_agent_consensus_ai(self, indicator_results: Dict[str, Any], data_availability: Dict[str, Any]) -> Dict[str, Any]:
-        """AI-enhanced agent consensus analysis."""
-        # Base consensus analysis
-        consensus_analysis = self._analyze_agent_consensus(indicator_results)
-
-        # AI enhancements
-        consensus_analysis["ai_enhanced"] = True
-        consensus_analysis["data_quality_weight"] = data_availability.get("quality_score", 0.5)
-
-        # Weighted consensus based on data quality
-        base_consensus = consensus_analysis.get("consensus_score", 0.0)
-        quality_weight = data_availability.get("quality_score", 0.5)
-        consensus_analysis["ai_weighted_consensus"] = base_consensus * quality_weight
-
-        # Enhanced confidence aggregation with uncertainty quantification
-        base_confidence = consensus_analysis.get("confidence_aggregation", 0.0)
-        uncertainty = 1.0 - quality_weight
-        consensus_analysis["ai_confidence_with_uncertainty"] = base_confidence * (1 - uncertainty * 0.5)
-
-        # AI-based agent reliability scoring
-        if len(consensus_analysis.get("dissenting_agents", [])) > 0:
-            consensus_analysis["dissent_penalty"] = len(consensus_analysis["dissenting_agents"]) * 0.1
-            consensus_analysis["ai_weighted_consensus"] *= (1 - consensus_analysis["dissent_penalty"])
-
-        return consensus_analysis
-
-    def _analyze_portfolio_risk_ai(self, indicator_results: Dict[str, Any], market_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
-        """AI-enhanced portfolio risk analysis."""
-        # Base portfolio analysis
-        portfolio_analysis = self._analyze_portfolio_risk(indicator_results)
-
-        # AI enhancements
-        portfolio_analysis["ai_enhanced"] = True
-
-        # Dynamic risk adjustment based on market regime
-        if 'OHLCV' in market_data and not market_data['OHLCV'].empty:
-            market_volatility = self._calculate_market_volatility(market_data['OHLCV'])
-            portfolio_analysis["market_volatility"] = market_volatility
-
-            # Adjust position size based on volatility
-            base_size = portfolio_analysis.get("recommended_size", 0.0)
-            volatility_adjustment = min(1.0, max(0.5, 1.0 - market_volatility))
-            portfolio_analysis["ai_adjusted_size"] = base_size * volatility_adjustment
-        else:
-            portfolio_analysis["ai_adjusted_size"] = portfolio_analysis.get("recommended_size", 0.0)
-
-        # AI-based risk budget optimization
-        available_budget = portfolio_analysis.get("risk_budget", 0.0)
-        current_risk = portfolio_analysis.get("portfolio_risk", 0.0)
-
-        if available_budget > 0:
-            budget_utilization = current_risk / available_budget
-            portfolio_analysis["budget_utilization"] = budget_utilization
-
-            # Conservative approach if budget is nearly exhausted
-            if budget_utilization > 0.8:
-                portfolio_analysis["ai_adjusted_size"] *= 0.5
-
-        return portfolio_analysis
-
     def _calculate_market_volatility(self, ohlcv_data: pd.DataFrame) -> float:
         """Calculate current market volatility."""
         if ohlcv_data.empty or len(ohlcv_data) < 10:
@@ -841,8 +784,9 @@ class DecisionMaster(BaseAgent):
         volatility = returns.std() if len(returns) > 0 else 0.02
 
         return min(volatility, 0.1)  # Cap at 10% daily volatility
-    def _synthesize_final_decision_ai(self, indicator_results: Dict[str, Any], consensus_analysis: Dict[str, Any],
-                                    portfolio_analysis: Dict[str, Any], market_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
+
+    def _synthesize_final_decision_ai_full(self, indicator_results: Dict[str, Any], consensus_analysis: Dict[str, Any],
+                                     portfolio_analysis: Dict[str, Any], market_data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
         """AI-enhanced final decision synthesis using ensemble methods."""
         try:
             # Prepare features for ensemble prediction
@@ -1001,6 +945,7 @@ class DecisionMaster(BaseAgent):
         targets_series = pd.Series(targets)
 
         return features_df, targets_series
+
     def _calculate_master_confidence_ai(self, consensus_analysis: Dict[str, Any], portfolio_analysis: Dict[str, Any],
                                        synthesis_analysis: Dict[str, Any], data_availability: Dict[str, Any]) -> float:
         """Calculate AI-enhanced master confidence."""

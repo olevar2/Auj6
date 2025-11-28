@@ -1,0 +1,138 @@
+﻿python : e:\AUG6\auj_platform\src\core\containers.py:69: UserWarning: MessagingServiceFactory not found, messaging 
+features may be limited
+At line:1 char:1
++ python e:\AUG6\auj_platform\scripts\verify_platform_init.py 2>&1 | Ou ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e:\AUG6\auj_pla... may be limited:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  warnings.warn("MessagingServiceFactory not found, messaging features may be limited")
+Task was destroyed but it is pending!
+task: <Task pending name='Task-3' coro=<UnifiedDatabaseManager._health_monitor_loop() done, defined at 
+e:\AUG6\auj_platform\src\core\unified_database_manager.py:810> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+WARNING:root:Using default RabbitMQ credentials - consider configuring explicit credentials
+WARNING:src.monitoring.economic_monitor:UnifiedNewsEconomicProvider not available: Can't instantiate abstract class 
+UnifiedNewsEconomicProvider without an implementation for abstract methods 'get_ohlcv_data', 'get_tick_data'
+WARNING:src.monitoring.economic_monitor:EconomicEventImpactIndicator not available: BaseIndicator.__init__() missing 1 
+required positional argument: 'name'
+WARNING:src.monitoring.economic_monitor:NewsSentimentImpactIndicator not available: BaseIndicator.__init__() missing 1 
+required positional argument: 'name'
+WARNING:src.monitoring.economic_monitor:EventVolatilityPredictor not available: BaseIndicator.__init__() missing 1 
+required positional argument: 'name'
+WARNING:src.monitoring.economic_monitor:EconomicCalendarConfluenceIndicator not available: BaseIndicator.__init__() 
+missing 1 required positional argument: 'name'
+WARNING:src.monitoring.economic_monitor:FundamentalMomentumIndicator not available: BaseIndicator.__init__() missing 1 
+required positional argument: 'name'
+[WARNING] 'schedule' module not available - Economic Monitor scheduling will be disabled
+Starting Platform Initialization Verification...
+Instantiating platform...
+[2025-11-26 02:50:53,846] [INFO] AUJ Platform logging initialized - Level: INFO, Log Dir: e:\AUG6\logs
+INFO:auj_platform:AUJ Platform logging initialized - Level: INFO, Log Dir: e:\AUG6\logs
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f680' in position 33: character maps to <undefined>
+Call stack:
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 94, in <module>
+    asyncio.run(verify_init())
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 712, in 
+run_until_complete
+    self.run_forever()
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 683, in run_forever
+    self._run_once()
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2050, in _run_once
+    handle._run()
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 56, in verify_init
+    success = await platform.initialize()
+  File "e:\AUG6\auj_platform\src\core\containers.py", line 354, in initialize
+    self.logger.info("\U0001f680 Initializing AUJ Platform with Dependency Injection")
+Message: '\U0001f680 Initializing AUJ Platform with Dependency Injection'
+Arguments: ()
+INFO:auj_platform.src.core.containers:\U0001f680 Initializing AUJ Platform with Dependency Injection
+--- Logging error ---
+Traceback (most recent call last):
+  File "e:\AUG6\auj_platform\src\core\containers.py", line 360, in initialize
+    await self.config_loader.load_configuration()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'UnifiedConfigManager' object has no attribute 'load_configuration'. Did you mean: 
+'export_configuration'?
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\logging\__init__.py", line 1154, in emit
+    stream.write(msg + self.terminator)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 73: character maps to <undefined>
+Call stack:
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 94, in <module>
+    asyncio.run(verify_init())
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 712, in 
+run_until_complete
+    self.run_forever()
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 683, in run_forever
+    self._run_once()
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 2050, in _run_once
+    handle._run()
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\events.py", line 89, in _run
+    self._context.run(self._callback, *self._args)
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 56, in verify_init
+    success = await platform.initialize()
+  File "e:\AUG6\auj_platform\src\core\containers.py", line 395, in initialize
+    self.logger.error(f"\u274c Platform initialization failed: {e}")
+Message: "\u274c Platform initialization failed: 'UnifiedConfigManager' object has no attribute 'load_configuration'"
+Arguments: ()
+ERROR:auj_platform.src.core.containers:\u274c Platform initialization failed: 'UnifiedConfigManager' object has no 
+attribute 'load_configuration'
+Platform instantiated successfully.
+Initializing platform...
+Traceback (most recent call last):
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 82, in verify_init
+    print("\u274c Platform initialization failed.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 94, in <module>
+    asyncio.run(verify_init())
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\asyncio\base_events.py", line 725, in 
+run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "e:\AUG6\auj_platform\scripts\verify_platform_init.py", line 86, in verify_init
+    print(f"\u274c Exception during verification: {e}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\oleva\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>

@@ -40,6 +40,7 @@ from ..coordination.genius_agent_coordinator import GeniusAgentCoordinator
 
 # Monitoring system
 from ..monitoring.economic_monitor import EconomicMonitor
+from ..core.alerting.alert_manager import AlertManager
 
 # Data providers and market data systems
 from ..data_providers.data_provider_manager import DataProviderManager
@@ -103,6 +104,30 @@ class PlatformContainer(containers.DeclarativeContainer):
 
     # Configuration - the foundation of everything using unified config system
     unified_config_manager = providers.Singleton(get_unified_config)
+
+    @classmethod
+    def validate_configuration(cls):
+        """Validate critical configuration parameters on startup."""
+        from ..core.logging_setup import get_logger
+        logger = get_logger(__name__)
+        
+        config = cls.unified_config_manager()
+        errors = []
+        
+        # Validate risk parameters
+        max_positions = config.get_int('max_positions', 0)
+        if max_positions <= 0 or max_positions > 100:
+            errors.append(f"Invalid max_positions: {max_positions}")
+        
+        max_daily_loss = config.get_float('risk.max_daily_loss_percent', 0)
+        if max_daily_loss <= 0 or max_daily_loss > 10:
+            errors.append(f"Invalid max_daily_loss_percent: {max_daily_loss}")
+        
+        if errors:
+            raise RuntimeError("Config validation failed: " + "; ".join(errors))
+        
+        logger.info("Configuration validation passed")
+        return True
 
     # Configuration dictionary provider
     config = providers.Callable(
@@ -203,6 +228,13 @@ class PlatformContainer(containers.DeclarativeContainer):
         data_provider_manager=data_provider_manager
     )
 
+    # Alert Manager
+    alert_manager = providers.Singleton(
+        AlertManager,
+        config_manager=unified_config_manager,
+        messaging_service=messaging_service
+    )
+
     # Hierarchy management
     hierarchy_manager = providers.Singleton(
         HierarchyManager,
@@ -279,7 +311,8 @@ class ApplicationContainer(containers.DeclarativeContainer):
         deal_monitoring_teams=platform.deal_monitoring_teams,
         messaging_service=platform.messaging_service,
         messaging_coordinator=platform.messaging_coordinator,
-        economic_monitor=platform.economic_monitor
+        economic_monitor=platform.economic_monitor,
+        alert_manager=platform.alert_manager
     )
 
 
@@ -308,7 +341,8 @@ class AUJPlatformDI:
                  deal_monitoring_teams: DealMonitoringTeams,
                  messaging_service: Optional[MessagingService],
                  messaging_coordinator: Optional[MessagingCoordinator],
-                 economic_monitor: 'EconomicMonitor'):
+                 economic_monitor: 'EconomicMonitor',
+                 alert_manager: 'AlertManager'):
         """Initialize AUJ Platform with injected dependencies."""
 
         # Store injected dependencies
@@ -339,6 +373,7 @@ class AUJPlatformDI:
 
         # Monitoring systems
         self.economic_monitor = economic_monitor
+        self.alert_manager = alert_manager
 
         # System state
         self.initialized = False

@@ -11,6 +11,11 @@ Every hour, before a new analysis cycle:
 4. System validates all changes using walk-forward analysis
 
 This ensures the platform continuously evolves while preventing overfitting.
+
+FIXES IMPLEMENTED:
+- Added missing RegimeClassifier import (was causing error on line 135)
+- Removed duplicate docstring (lines 156-169 in original)
+- Added self.database initialization (was undefined in _initialize_database)
 """
 
 import asyncio
@@ -45,6 +50,7 @@ from ..learning.agent_behavior_optimizer import AgentBehaviorOptimizer
 from ..hierarchy.hierarchy_manager import HierarchyManager
 from ..coordination.genius_agent_coordinator import GeniusAgentCoordinator
 from ..monitoring.economic_monitor import EconomicMonitor
+from ..regime_detection.regime_classifier import RegimeClassifier  # FIXED: Added missing import
 
 
 class FeedbackLoopPhase(str, Enum):
@@ -153,20 +159,9 @@ class RobustHourlyFeedbackLoop:
         """
         from ..core.unified_config import get_unified_config
         self.config_manager = get_unified_config()
-        """
-        Initialize the Robust Hourly Feedback Loop.
         
-        Args:
-            walk_forward_validator: Validation engine
-            performance_tracker: Performance tracking system
-            indicator_analyzer: Indicator effectiveness analyzer
-            agent_optimizer: Agent behavior optimizer
-            hierarchy_manager: Agent hierarchy manager
-            genius_coordinator: Agent coordination system
-            regime_classifier: Market regime detection
-            database_path: Path to feedback loop database
-            config: Configuration parameters
-        """
+        # FIXED: Removed duplicate docstring that was here (lines 156-169 in original)
+        
         # Core components
         self.walk_forward_validator = walk_forward_validator
         self.performance_tracker = performance_tracker
@@ -180,6 +175,9 @@ class RobustHourlyFeedbackLoop:
         # Configuration
         self.database_path = database_path or "data/feedback_loop.db"
         self.config = config or {}
+        
+        # FIXED: Initialize database connection
+        self.database = get_unified_database()
         
         # Loop parameters
         self.loop_frequency = timedelta(hours=self.config_manager.get_int('loop_frequency_hours', 1))
@@ -266,7 +264,10 @@ class RobustHourlyFeedbackLoop:
                     stability_score REAL,
                     active_agents INTEGER,
                     elite_indicators_count INTEGER,
-                    market_regime TEXT
+                    market_regime TEXT,
+                    comprehensive_analysis_rate REAL,
+                    analysis_consistency_score REAL,
+                    full_validation_rate REAL
                 )
             """, use_cache=False)
             
@@ -293,30 +294,30 @@ class RobustHourlyFeedbackLoop:
         """Load historical performance metrics."""
         try:
             # Using unified database manager instead of direct sqlite3
-                # Load recent performance trends
-                cursor = self.database.execute_query_sync("""
-                    SELECT overall_performance, overfitting_risk 
-                    FROM performance_trends 
-                    ORDER BY timestamp DESC 
-                    LIMIT 100
-                """, use_cache=False)
-                
-                for row in cursor.fetchall():
-                    self.system_performance_history.append(row[0])
-                    self.overfitting_risk_history.append(row[1])
-                
-                # Load last execution time
-                cursor = self.database.execute_query_sync("""
-                    SELECT timestamp FROM feedback_loop_executions 
-                    ORDER BY timestamp DESC 
-                    LIMIT 1
-                """, use_cache=False)
-                
-                result = cursor.fetchone()
-                if result:
-                    self.last_execution = datetime.fromisoformat(result[0])
-                    self.next_execution = self.last_execution + self.loop_frequency
-                
+            # Load recent performance trends
+            cursor = self.database.execute_query_sync("""
+                SELECT overall_performance, overfitting_risk 
+                FROM performance_trends 
+                ORDER BY timestamp DESC 
+                LIMIT 100
+            """, use_cache=False)
+            
+            for row in cursor.fetchall():
+                self.system_performance_history.append(row[0])
+                self.overfitting_risk_history.append(row[1])
+            
+            # Load last execution time
+            cursor = self.database.execute_query_sync("""
+                SELECT timestamp FROM feedback_loop_executions 
+                ORDER BY timestamp DESC 
+                LIMIT 1
+            """, use_cache=False)
+            
+            result = cursor.fetchone()
+            if result:
+                self.last_execution = datetime.fromisoformat(result[0])
+                self.next_execution = self.last_execution + self.loop_frequency
+            
         except Exception as e:
             self.logger.warning(f"Failed to load historical metrics: {str(e)}")
     
@@ -472,7 +473,8 @@ class RobustHourlyFeedbackLoop:
             )
             
             await self._save_execution_metrics(error_metrics)
-            return error_metrics    
+            return error_metrics
+    
     async def _phase_initialization(self):
         """Initialize the feedback loop cycle."""
         self.logger.info("Phase 1: Initialization")
@@ -941,7 +943,8 @@ class RobustHourlyFeedbackLoop:
             
         except Exception as e:
             self.logger.warning(f"Failed to assess system stability: {str(e)}")
-            return 0.0    
+            return 0.0
+    
     async def _handle_emergency_stop(self, trigger_type: str, trigger_value: str):
         """Handle emergency stop conditions."""
         self.logger.critical(f"Emergency stop triggered: {trigger_type} = {trigger_value}")
@@ -1004,10 +1007,11 @@ class RobustHourlyFeedbackLoop:
                 self.current_loop_id,
                 datetime.utcnow().isoformat(),
                 current_regime.value,
-                json.dumps({k: v.value for k, v in agent_rankings.items()}),
+                json.dumps({k: v.value if hasattr(v, 'value') else v for k, v in agent_rankings.items()}),
                 json.dumps(elite_indicators),
                 json.dumps(performance_metrics)
             ), use_cache=False)
+            
             # Update last successful state
             self.last_successful_state = {
                 'snapshot_id': snapshot_id,
