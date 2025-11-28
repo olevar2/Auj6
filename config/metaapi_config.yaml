@@ -1,16 +1,18 @@
-# MetaApi Configuration for AUJ Platform
-# Linux-optimized configuration for MetaApi cloud service
-# Replaces MT5 direct connection for cross-platform compatibility
+# MetaApi Configuration for AUJ Platform - Linux Optimized
+# Production-ready configuration for Linux deployment
 
 # MetaApi Connection Parameters
 metaapi:
+  # Enable MetaApi (Primary data source for Linux)
+  enabled: true
+  
   # API Token (set via environment variable AUJ_METAAPI_TOKEN)
   token: ""
   
-  # Account Configuration
-  account_id: ""  # Set via environment variable AUJ_METAAPI_ACCOUNT_ID
+  # Account Configuration (set via environment variable AUJ_METAAPI_ACCOUNT_ID)
+  account_id: ""
   
-  # Connection Settings
+  # Connection Settings - Optimized for Linux
   timeout_seconds: 30
   max_retries: 3
   retry_delay_seconds: 5
@@ -19,26 +21,26 @@ metaapi:
   application: "AUJ-Platform"
   domain: "auj-platform.com"
   
-  # Deployment Configuration
+  # Deployment Configuration - Linux Production
   deployment_configuration:
-    environment: "production"  # production, staging, development
-    region: "new-york"         # new-york, london, singapore
+    environment: "production"
+    region: "london"  # or "new-york" based on location
     quoting_api: true
     
   # Trading Configuration
   trading:
     # Risk Parameters
-    max_risk_percent: 0.02      # 2% max risk per trade
-    default_volume: 0.1         # Default lot size
-    min_volume: 0.01           # Minimum lot size
-    max_volume: 10.0           # Maximum lot size
-    volume_step: 0.01          # Volume step
+    max_risk_percent: 0.02
+    default_volume: 0.1
+    min_volume: 0.01
+    max_volume: 10.0
+    volume_step: 0.01
     
     # Order Parameters
-    deviation_points: 20        # Maximum price deviation
-    magic_number: 234567       # Magic number for AUJ MetaApi orders
-    order_timeout_seconds: 30   # Order execution timeout
-    slippage_tolerance: 0.5     # Maximum slippage tolerance (pips)
+    deviation_points: 20
+    magic_number: 234567
+    order_timeout_seconds: 30
+    slippage_tolerance: 0.5
     
     # Advanced Trading Features
     enable_partial_fills: true
@@ -47,7 +49,7 @@ metaapi:
     enable_stop_orders: true
     enable_limit_orders: true
 
-# Data Streaming Configuration
+# Data Streaming Configuration - Linux Optimized
 streaming:
   # WebSocket Settings
   websocket:
@@ -60,14 +62,14 @@ streaming:
     
   # Data Types
   data_types:
-    ticks: true              # Real-time tick data
-    candles: true            # OHLCV candle data
-    books: false             # Order book data (premium feature)
+    ticks: true
+    candles: true
+    books: false
     
   # Subscription Management
   subscriptions:
     auto_subscribe_symbols: true
-    symbol_filter: []        # Empty = all symbols, or specify list
+    symbol_filter: []
     timeframes:
       - "1m"
       - "5m"
@@ -79,126 +81,16 @@ streaming:
 
 # Historical Data Configuration
 historical_data:
-  # Data Limits
   max_candles_per_request: 1000
   max_ticks_per_request: 1000
   cache_duration_minutes: 60
-  
-  # Default Parameters
   default_timeframe: "1h"
   default_limit: 1000
-  
-  # Data Quality
   fill_gaps: true
   remove_duplicates: true
   validate_timestamps: true
 
-# Supported Trading Symbols
-symbols:
-  # Major Forex Pairs
-  forex_major:
-    - "EURUSD"
-    - "GBPUSD"
-    - "USDJPY"
-    - "USDCHF"
-    - "AUDUSD"
-    - "USDCAD"
-    - "NZDUSD"
-    
-  # Minor Forex Pairs
-  forex_minor:
-    - "EURGBP"
-    - "EURJPY"
-    - "GBPJPY"
-    - "EURAUD"
-    - "EURCHF"
-    - "GBPCHF"
-    - "AUDCHF"
-    - "AUDJPY"
-    - "CADJPY"
-    - "CHFJPY"
-    - "AUDNZD"
-    - "GBPAUD"
-    
-  # Metals
-  metals:
-    - "XAUUSD"    # Gold
-    - "XAGUSD"    # Silver
-    - "XPTUSD"    # Platinum
-    - "XPDUSD"    # Palladium
-    
-  # Indices
-  indices:
-    - "SPX500"    # S&P 500
-    - "NAS100"    # NASDAQ 100
-    - "GER40"     # DAX
-    - "UK100"     # FTSE 100
-    - "FRA40"     # CAC 40
-    - "JPN225"    # Nikkei 225
-    - "AUS200"    # ASX 200
-    
-  # Commodities
-  commodities:
-    - "USOIL"     # Crude Oil
-    - "UKOIL"     # Brent Oil
-    - "NATGAS"    # Natural Gas
-    
-  # Cryptocurrencies (if supported by broker)
-  crypto:
-    - "BTCUSD"
-    - "ETHUSD"
-    - "LTCUSD"
-    - "BCHUSD"
-
-# Account Information Settings
-account:
-  # Balance and Equity Monitoring
-  monitoring:
-    check_balance_interval_seconds: 60
-    equity_warning_threshold: 0.85     # Warn at 85% equity
-    margin_warning_threshold: 0.90     # Warn at 90% margin usage
-    
-  # Account Validation
-  validation:
-    verify_account_on_startup: true
-    check_trading_permissions: true
-    validate_symbol_access: true
-
-# Position and Order Management
-position_management:
-  # Position Monitoring
-  sync_interval_seconds: 30
-  max_positions: 20
-  enable_position_tracking: true
-  
-  # Order Management
-  order_expiry_minutes: 60           # Default order expiry
-  enable_order_modification: true
-  enable_order_cancellation: true
-  
-  # Risk Controls
-  max_slippage_pips: 2.0
-  max_spread_pips: 5.0
-  enable_spread_filter: true
-
-# Error Handling and Recovery
-error_handling:
-  # Connection Errors
-  auto_reconnect: true
-  max_connection_errors: 5
-  connection_error_delay: 10
-  
-  # Trading Errors
-  retry_failed_orders: true
-  max_order_retries: 3
-  order_retry_delay: 5
-  
-  # Data Errors
-  validate_market_data: true
-  skip_invalid_data: true
-  log_data_errors: true
-
-# Performance Optimization
+# Performance Optimization for Linux
 performance:
   # Connection Pooling
   enable_connection_pooling: true
@@ -213,171 +105,23 @@ performance:
   # Rate Limiting
   api_rate_limit_per_second: 10
   websocket_rate_limit_per_second: 100
-  
-  # Batching
-  enable_batch_requests: true
-  batch_size: 50
-  batch_timeout_ms: 1000
-
-# Linux-Specific Settings
-linux:
-  # System Requirements
-  min_memory_mb: 512
-  recommended_memory_mb: 1024
-  
-  # Process Management
-  enable_daemon_mode: true
-  pid_file: "/var/run/auj-metaapi.pid"
-  log_file: "/var/log/auj-platform/metaapi.log"
-  
-  # Network Configuration
-  bind_interface: "0.0.0.0"
-  firewall_ports:
-    - 443   # HTTPS for REST API
-    - 80    # HTTP (redirects to HTTPS)
-  
-  # Security
-  enable_ssl_verification: true
-  ssl_cert_path: ""
-  ssl_key_path: ""
-
-# Monitoring and Diagnostics
-monitoring:
-  # Health Checks
-  enable_health_checks: true
-  health_check_interval_seconds: 60
-  
-  # Metrics Collection
-  enable_metrics: true
-  metrics_interval_seconds: 30
-  
-  # Diagnostics
-  enable_diagnostics: true
-  diagnostic_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
-  
-  # Performance Tracking
-  track_latency: true
-  track_throughput: true
-  track_error_rates: true
 
 # Logging Configuration
 logging:
-  # Log Levels
-  level: "INFO"              # DEBUG, INFO, WARNING, ERROR, CRITICAL
-  
-  # Log Targets
+  level: "INFO"
   console: true
   file: true
-  syslog: false
-  
-  # File Logging
   file_settings:
     path: "logs/metaapi.log"
     max_size_mb: 50
     backup_count: 5
     rotation: "daily"
-  
-  # Log Content
-  log_api_calls: false       # Set to true for debugging
-  log_websocket_messages: false
   log_trading_operations: true
-  log_market_data: false
   log_errors: true
-
-# Development and Testing
-development:
-  # Demo Account Settings
-  demo_mode: true
-  demo_account_settings:
-    balance: 10000
-    leverage: 100
-    currency: "USD"
-  
-  # Testing Features
-  enable_test_mode: false
-  test_latency_ms: 0         # Artificial latency for testing
-  test_error_rate: 0.0       # Artificial error rate (0.0-1.0)
-  
-  # Debug Features
-  debug_api_calls: false
-  debug_websocket: false
-  debug_trading: false
-
-# Backup and Failover
-backup:
-  # Account Backup
-  backup_account_state: true
-  backup_interval_minutes: 60
-  backup_retention_days: 7
-  
-  # Configuration Backup
-  backup_config: true
-  config_backup_path: "backups/metaapi_config"
-  
-  # Failover Settings
-  enable_failover: true
-  failover_timeout_seconds: 30
-  failover_retry_attempts: 3
-
-# Integration Settings
-integration:
-  # Platform Integration
-  auj_platform:
-    enable_coordination: true
-    sync_positions: true
-    sync_orders: true
-    sync_balance: true
-  
-  # External Services
-  external_services:
-    enable_webhooks: false
-    webhook_url: ""
-    webhook_secret: ""
-  
-  # Data Export
-  data_export:
-    enable_csv_export: true
-    enable_json_export: true
-    export_path: "exports/metaapi"
-
-# Feature Flags
-features:
-  # Trading Features
-  enable_automated_trading: true
-  enable_manual_trading: true
-  enable_copy_trading: false
-  enable_social_trading: false
-  
-  # Advanced Features
-  enable_algorithmic_trading: true
-  enable_machine_learning: true
-  enable_sentiment_analysis: true
-  enable_news_trading: false
-  
-  # Risk Management
-  enable_advanced_risk_management: true
-  enable_portfolio_management: true
-  enable_correlation_analysis: true
-  
-  # Analytics
-  enable_performance_analytics: true
-  enable_trade_analytics: true
-  enable_market_analytics: true
 
 # Security Configuration
 security:
-  # API Security
-  enable_token_rotation: false
-  token_rotation_days: 90
-  
-  # Access Control
-  enable_ip_whitelist: false
-  allowed_ips: []
-  
-  # Encryption
   enable_data_encryption: true
   encryption_algorithm: "AES-256"
-  
-  # Audit Logging
   enable_audit_log: true
   audit_log_path: "logs/metaapi_audit.log"
