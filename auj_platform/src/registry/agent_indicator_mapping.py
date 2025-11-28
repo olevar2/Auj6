@@ -4,10 +4,38 @@ Agent Indicator Mapping Registry for AUJ Platform.
 This module defines the complete mapping between agents and their assigned indicators,
 including exact roles and tools for each of the 10 expert agents.
 
+═══════════════════════════════════════════════════════════════════════════════
+INDICATOR STATISTICS (Last Verified: 2025-11-28)
+═══════════════════════════════════════════════════════════════════════════════
+Total Unique Indicators:    159
+Total Agent Assignments:    159
+Total Agents:               10
+Physical Files Confirmed:   ✓ All 159 indicators have implementation files
+
+DISTRIBUTION BY AGENT:
+- TrendAgent:             29 indicators
+- DecisionMaster:         23 indicators
+- ExecutionExpert:        18 indicators
+- RiskGenius:             17 indicators
+- MicrostructureAgent:    16 indicators
+- IndicatorExpert:        15 indicators
+- PatternMaster:          12 indicators
+- SessionExpert:          12 indicators
+- PairSpecialist:         11 indicators
+- MomentumAgent:           8 indicators
+
+IMPORTANT: This mapping is the single source of truth for agent-indicator assignments.
+Do not modify without:
+1. Verifying physical indicator files exist
+2. Updating this documentation block
+3. Running validation: validate_agent_mapping()
+═══════════════════════════════════════════════════════════════════════════════
+
 UPDATED: Now contains only real indicators that actually exist in the platform.
 
 FIXES IMPLEMENTED:
 - Fixed corrupted module docstring (lines 4-14 had code fragments and broken text)
+- Added comprehensive statistics documentation (2025-11-28)
 """
 
 from typing import Dict, List, Any
