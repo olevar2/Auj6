@@ -1338,7 +1338,7 @@ def config_tab():
             with col1:
                 new_broker_name = st.text_input("Broker Name", placeholder="e.g., MetaTrader5")
             with col2:
-                new_broker_type = st.selectbox("Broker Type", ["MT5", "MT4", "cTrader", "TradingView"])
+                new_broker_type = st.selectbox("Broker Type", ["MetaApi", "cTrader", "TradingView"])
 
             new_broker_key = st.text_input("API Key/Connection String", type="password")
             new_broker_server = st.text_input("Server (optional)", placeholder="e.g., server.broker.com")
@@ -1430,31 +1430,31 @@ def config_tab():
 
         st.markdown("---")
 
-    # Add new account section
-    with st.expander("➕ Add New MT5 Account", expanded=False):
-        # Simplified instructions
-        st.info("� **Simple Setup**: Just enter your MT5 account number, password, and server. "
-               "AUJ Platform will connect directly to your MetaTrader 5 terminal.")
+    # Add new account section - MetaApi Integration (Linux Migration Phase 2)
+    with st.expander("➕ Add New MetaApi Account", expanded=False):
+        st.success("✅ **MetaApi Integration**: Platform now uses MetaApi as the primary data provider (Linux optimized)")
+        st.info("💡 **Simple Setup**: Enter your MetaApi token and account ID. "
+               "Get your credentials from https://app.metaapi.cloud")
 
-        with st.form("new_mt5_account_form"):
-            st.subheader("🔑 MT5 Account Details")
-            st.markdown("*Enter your standard MT5 login credentials:*")
+        with st.form("new_metaapi_account_form"):
+            st.subheader("🔑 MetaApi Account Details")
+            st.markdown("*Enter your MetaApi credentials:*")
 
             col1, col2 = st.columns(2)
             with col1:
-                account_login = st.text_input("MT5 Login", placeholder="e.g., 12345678",
-                                            help="Your MetaTrader 5 account login number")
-                mt5_password = st.text_input("MT5 Password", type="password",
-                                           help="Your MetaTrader 5 account password")
-                mt5_server = st.text_input("MT5 Server", placeholder="e.g., RoboForex-ECN",
-                                         help="Your broker's MT5 server name")
+                metaapi_token = st.text_input("MetaApi Token", type="password",
+                                            placeholder="token-XXXXXXXXXXXX",
+                                            help="Your MetaApi authentication token from app.metaapi.cloud")
+                metaapi_account_id = st.text_input("MetaApi Account ID",
+                                                  placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+                                                  help="Your MetaApi trading account ID")
 
             with col2:
-                broker_name = st.text_input("Broker Name", placeholder="e.g., RoboForex",
-                                          help="Display name for your broker")
-                account_name = st.text_input("Account Name (optional)",
-                                           placeholder="e.g., Main Trading Account")
-                initial_balance = st.number_input("Initial Balance ($)", min_value=0.0, value=10000.0)
+                account_name = st.text_input("Display Name",
+                                           placeholder="e.g., Main Trading Account",
+                                           help="Friendly name for this account")
+                initial_balance = st.number_input("Initial Balance ($)", min_value=0.0, value=10000.0,
+                                                help="Starting balance for tracking")
 
             st.subheader("🤖 AUJ Platform Auto-Management")
             st.success("✅ AUJ Platform will automatically manage all account settings, risk allocation, and position sizing for optimal performance.")
@@ -1470,7 +1470,6 @@ def config_tab():
             with st.expander("⚙️ Advanced Settings (Optional)", expanded=False):
                 st.markdown("**💡 Tip:** AUJ Platform automatically optimizes these settings. Only change if you have specific requirements.")
 
-                # Basic preferences
                 col5, col6 = st.columns(2)
                 with col5:
                     currency = st.selectbox("Account Currency", ["USD", "EUR", "GBP", "JPY", "AUD", "CAD"], index=0,
@@ -1487,34 +1486,16 @@ def config_tab():
                                                 default=["EURUSD", "GBPUSD", "USDJPY"],
                                                 help="Leave empty to let AUJ Platform choose optimal pairs")
 
-                st.markdown("---")
-
-                # Bridge settings for advanced users only
-                st.subheader("🔗 Bridge Connection (Advanced Users Only)")
-                st.info("Only configure if you're using AUJ Platform's MT5 Bridge for remote connections")
-
-                col_bridge1, col_bridge2 = st.columns(2)
-                with col_bridge1:
-                    bridge_host = st.text_input("Bridge Host", value="localhost",
-                                              help="IP address of machine running MT5 (localhost for same machine)")
-                    bridge_port = st.number_input("Bridge Port", value=5555, min_value=1024, max_value=65535,
-                                                help="Port for MT5 Bridge communication")
-                with col_bridge2:
-                    use_bridge = st.checkbox("Enable Bridge Mode", value=False,
-                                           help="Check only if using remote MT5 connection")
-                    bridge_timeout = st.number_input("Connection Timeout (sec)", value=30, min_value=5, max_value=120)
-
-            submitted = st.form_submit_button("🚀 Add MT5 Account", use_container_width=True)
+            submitted = st.form_submit_button("🚀 Add MetaApi Account", use_container_width=True)
 
             if submitted:
-                if account_login and mt5_password and mt5_server and broker_name:
-                    # Create MT5 account payload - AUJ Platform handles all management automatically
+                if metaapi_token and metaapi_account_id:
+                    # Create MetaApi account payload - aligned with Linux migration
                     payload = {
-                        "broker_name": broker_name,
-                        "account_login": account_login,
-                        "password": mt5_password,
-                        "server": mt5_server,
-                        "account_name": account_name or f"{broker_name} - {account_login}",
+                        "provider": "metaapi",
+                        "metaapi_token": metaapi_token,
+                        "metaapi_account_id": metaapi_account_id,
+                        "account_name": account_name or f"MetaApi - {metaapi_account_id[:8]}",
                         "initial_balance": initial_balance,
                         "account_type": account_type,
                         "is_primary": is_primary,
@@ -1524,51 +1505,22 @@ def config_tab():
                             "end": trading_end.strftime("%H:%M")
                         },
                         "allowed_symbols": allowed_symbols,
-                        "use_bridge": use_bridge,
-                        "bridge_settings": {
-                            "host": bridge_host if use_bridge else "localhost",
-                            "port": bridge_port if use_bridge else 5555,
-                            "timeout": bridge_timeout if use_bridge else 30
-                        },
-                        "auto_management": True,  # AUJ Platform handles everything automatically
+                        "auto_management": True,
                         "status": "ACTIVE"
                     }
 
-                    # For most users, skip bridge testing and add account directly
-                    proceed_with_account = True
-
-                    if use_bridge:
-                        # Test bridge connection only if bridge mode is enabled
-                        with st.spinner("Testing MT5 Bridge connection..."):
-                            bridge_test = api_post("/api/mt5/test-bridge", {
-                                "host": bridge_host,
-                                "port": bridge_port,
-                                "login": account_login,
-                                "password": mt5_password,
-                                "server": mt5_server
-                            })
-
-                        if bridge_test and bridge_test.get("status") == "success":
-                            st.success("✅ Bridge connection successful!")
+                    # Add the MetaApi account
+                    with st.spinner("Adding MetaApi account..."):
+                        response = api_post("/api/accounts", payload)
+                        if response:
+                            st.success("✅ MetaApi Account added successfully!")
+                            st.balloons()
+                            time.sleep(2)
+                            st.rerun()
                         else:
-                            st.error("❌ Bridge connection failed. Please check your bridge settings.")
-                            if bridge_test:
-                                st.error(f"Error: {bridge_test.get('error', 'Unknown error')}")
-                            proceed_with_account = False
-
-                    # Add the account (works for both direct MT5 and bridge connections)
-                    if proceed_with_account:
-                        with st.spinner("Adding MT5 account..."):
-                            response = api_post("/api/mt5/accounts", payload)
-                            if response:
-                                st.success("✅ MT5 Account added successfully!")
-                                st.balloons()
-                                time.sleep(2)
-                                st.rerun()
-                            else:
-                                st.error("❌ Failed to add MT5 account")
+                            st.error("❌ Failed to add MetaApi account. Please check your credentials.")
                 else:
-                    st.warning("⚠️ Please fill in all required MT5 fields")
+                    st.warning("⚠️ Please fill in all required fields (MetaApi Token and Account ID)")
 
     # Display accounts
     accounts_data = api_get("/api/accounts")

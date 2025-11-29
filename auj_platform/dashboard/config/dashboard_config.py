@@ -1,6 +1,11 @@
 """
 Dashboard Configuration Settings
 Professional configuration for AUJ Platform Chart Analysis Dashboard
+
+Updated for Linux Migration Phase 2:
+- MetaApi as primary data provider
+- MT5 explicitly disabled and deprecated
+- Aligned with linux_deployment.yaml settings
 """
 
 # Chart settings
@@ -205,6 +210,53 @@ FEATURE_FLAGS = {
     'mobile_responsive': True
 }
 
+# =============================================================================
+# NEW: Data Provider Configuration (Aligned with Linux Migration Phase 2)
+# =============================================================================
+# This section reflects the platform's migration to MetaApi as the primary
+# data provider, with MT5 explicitly disabled as per linux_deployment.yaml
+DATA_PROVIDER_CONFIG = {
+    # Primary data provider - aligned with config/linux_deployment.yaml
+    'primary_provider': 'metaapi',
+    
+    # MT5 Configuration - DEPRECATED as per Linux migration
+    'mt5': {
+        'enabled': False,           # Explicitly disabled
+        'deprecated': True,         # Marked as deprecated
+        'migration_complete': True, # Migration to MetaApi complete
+        'reason': 'Platform migrated to Linux with MetaApi as primary provider'
+    },
+    
+    # MetaApi Configuration - PRIMARY PROVIDER
+    'metaapi': {
+        'enabled': True,
+        'trading': True,
+        'streaming': True,
+        'websocket_enabled': True,
+        'auto_reconnect': True,
+        'connection_pooling': True,
+        'max_connections': 10
+    },
+    
+    # Supported provider types for dashboard UI
+    'supported_providers': ['metaapi', 'ctrader', 'tradingview'],
+    
+    # Provider display names for UI
+    'provider_display_names': {
+        'metaapi': 'MetaApi',
+        'ctrader': 'cTrader',
+        'tradingview': 'TradingView'
+    },
+    
+    # Migration notes
+    'migration_info': {
+        'phase': 'Phase 2 - Configuration Optimization',
+        'date': '2025-11-29',
+        'status': 'Complete',
+        'details': 'MT5 deprecated, MetaApi is now the sole primary provider'
+    }
+}
+
 # Default Configuration Function
 def get_default_config():
     """Get default configuration dictionary"""
@@ -218,7 +270,8 @@ def get_default_config():
         'validation': VALIDATION_CONFIG,
         'professional': PROFESSIONAL_CONFIG,
         'security': SECURITY_CONFIG,
-        'features': FEATURE_FLAGS
+        'features': FEATURE_FLAGS,
+        'data_provider': DATA_PROVIDER_CONFIG  # NEW: Added data provider config
     }
 
 # Configuration Validation
