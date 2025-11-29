@@ -17,12 +17,13 @@ FIXES IMPLEMENTED:
 - Fixed DealGrade values (using correct enum values)
 - Added HierarchyManager integration
 - Removed unreachable code blocks
+- FIXED: Changed position_history from unlimited List to deque(maxlen=1000) to prevent memory leak
 """
 
 import asyncio
 import logging
 import uuid
-from collections import defaultdict
+from collections import defaultdict, deque  # FIXED: Added deque import
 from datetime import datetime, timedelta
 from decimal import Decimal
 from enum import Enum
@@ -179,8 +180,9 @@ class DealMonitoringTeams:
         # Active positions being monitored (real-time only)
         self.active_positions: Dict[str, DealPosition] = {}
         
-        # FIXED: NEW - Position history initialization (was missing)
-        self.position_history: List[DealPosition] = []
+        # FIXED: Changed from List to deque with maxlen to prevent memory leak
+        # Keeps last 1000 closed positions for analysis without unlimited growth
+        self.position_history: deque = deque(maxlen=1000)
 
         # Alert management
         self.active_alerts: Dict[str, MonitoringAlert] = {}

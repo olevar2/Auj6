@@ -257,13 +257,14 @@ class PlatformContainer(containers.DeclarativeContainer):
         ExecutionHandler,
         config_manager=unified_config_manager,
         risk_manager=dynamic_risk_manager,
-        messaging_service=messaging_service
+        messaging_service=messaging_service,
+        deal_monitoring_teams=deal_monitoring_teams  # FIXED: Added dependency injection
     )
 
     deal_monitoring_teams = providers.Singleton(
         DealMonitoringTeams,
-        config=unified_config_manager,
-        performance_tracker=performance_tracker
+        performance_tracker=performance_tracker,
+        hierarchy_manager=hierarchy_manager  # FIXED: Added dependency injection
     )
 
     # Genius Agent Coordinator
