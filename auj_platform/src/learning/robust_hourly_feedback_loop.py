@@ -139,6 +139,7 @@ class RobustHourlyFeedbackLoop:
                  hierarchy_manager: HierarchyManager,
                  genius_coordinator: GeniusAgentCoordinator,
                  regime_classifier: RegimeClassifier,
+                 execution_handler: Optional[Any] = None,
                  economic_monitor: Optional[EconomicMonitor] = None,
                  database_path: Optional[str] = None,
                  config: Optional[Any] = None):
@@ -170,6 +171,7 @@ class RobustHourlyFeedbackLoop:
         self.hierarchy_manager = hierarchy_manager
         self.genius_coordinator = genius_coordinator
         self.regime_classifier = regime_classifier
+        self.execution_handler = execution_handler
         self.economic_monitor = economic_monitor
         
         # Configuration
@@ -411,7 +413,22 @@ class RobustHourlyFeedbackLoop:
             phase_start = datetime.utcnow()
             trade_signal = await self.genius_coordinator.execute_analysis_cycle()
             if trade_signal:
-                self.logger.info(f"Coordinator generated trade signal: {trade_signal.symbol} {trade_signal.direction}")
+                self.logger.info(f"✅ Coordinator generated trade signal: {trade_signal.symbol} {trade_signal.direction.value} (Confidence: {trade_signal.confidence:.3f})")
+                
+                # CRITICAL INTEGRATION: Execute the trade signal
+                if self.execution_handler:
+                    try:
+                        execution_report = await self.execution_handler.execute_trade_signal(trade_signal)
+                        if execution_report.success:
+                            self.logger.info(f"✅ Trade executed successfully: {execution_report.order.symbol} {execution_report.order.direction.value}")
+                        else:
+                            self.logger.warning(f"⚠️ Trade execution failed: {', '.join(execution_report.errors)}")
+                    except Exception as e:
+                        self.logger.error(f"❌ Trade execution error: {str(e)}")
+                else:
+                    self.logger.warning("⚠️ ExecutionHandler not available - signal not executed (dry run mode)")
+            else:
+                self.logger.info("ℹ️ No trade signal generated this cycle")
             phase_durations["COORDINATOR_EXECUTION"] = (datetime.utcnow() - phase_start).total_seconds()
             
             # Phase 11: Execute Economic Monitor Cycle
@@ -1270,3 +1287,12 @@ class RobustHourlyFeedbackLoop:
             await self._save_system_state_snapshot()
         
         self.logger.info("Feedback loop shutdown complete")
+    
+    async def start(self):
+        """
+        Start the robust hourly feedback loop.
+        
+        Convenience method for platform integration - delegates to start_feedback_loop().
+        """
+        return await self.start_feedback_loop()
+
