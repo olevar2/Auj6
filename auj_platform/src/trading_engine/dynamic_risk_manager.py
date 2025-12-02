@@ -11,6 +11,7 @@ Key Features:
 - Dynamic risk adjustment based on market conditions
 - Portfolio-level risk management
 - Real-time risk monitoring and alerts
+- ⭐ NEW: RiskGenius integration for enhanced risk assessment
 """
 
 import asyncio
@@ -44,6 +45,7 @@ class DynamicRiskManager:
     - Portfolio heat monitoring
     - Correlation analysis
     - Market regime adaptation
+    - ⭐ NEW: Direct RiskGenius risk assessment integration
     """
     
     def __init__(self, config_manager: Any, portfolio_tracker: Any = None):
@@ -86,7 +88,7 @@ class DynamicRiskManager:
         
         self._validate_risk_parameters()
         
-        logger.info("Dynamic Risk Manager initialized")
+        logger.info("Dynamic Risk Manager initialized with RiskGenius integration")
 
     def _validate_risk_parameters(self):
         """Validate loaded risk parameters."""
@@ -124,7 +126,8 @@ class DynamicRiskManager:
                                     signal: TradeSignal,
                                     account_info: AccountInfo,
                                     market_conditions: Optional[MarketConditions] = None,
-                                    current_price: Optional[Decimal] = None) -> Tuple[Decimal, RiskMetrics]:
+                                    current_price: Optional[Decimal] = None,
+                                    risk_assessment: Optional[Dict[str, Any]] = None) -> Tuple[Decimal, RiskMetrics]:
         """
         Calculate optimal position size using confidence scaling and dynamic risk adjustment.
         
@@ -133,6 +136,7 @@ class DynamicRiskManager:
             account_info: Current account information
             market_conditions: Current market conditions
             current_price: Current market price for the symbol
+            risk_assessment: ⭐ NEW - Optional detailed risk assessment from RiskGenius agent
             
         Returns:
             Tuple of (position_size, risk_metrics)
@@ -167,12 +171,23 @@ class DynamicRiskManager:
             regime_adjustment = self._calculate_regime_adjustment(market_conditions)
             regime_adjusted_size = heat_adjusted_size * Decimal(str(regime_adjustment))
             
-            # Step 7: Apply final limits and validation
+            # ⭐ NEW Step 7: Apply RiskGenius risk assessment adjustment (if available)
+            risk_assessment_factor = 1.0
+            if risk_assessment:
+                risk_assessed_size = self._apply_risk_assessment_adjustment(
+                    regime_adjusted_size,
+                    risk_assessment
+                )
+                risk_assessment_factor = float(risk_assessed_size / regime_adjusted_size) if regime_adjusted_size > 0 else 1.0
+            else:
+                risk_assessed_size = regime_adjusted_size
+            
+            # Step 8: Apply final limits and validation
             final_position_size, adjustments = await self._apply_final_limits(
-                regime_adjusted_size, signal, account_info
+                risk_assessed_size, signal, account_info
             )
             
-            # Step 8: Calculate comprehensive risk metrics
+            # Step 9: Calculate comprehensive risk metrics
             risk_metrics = await self._calculate_risk_metrics(
                 signal=signal,
                 account_info=account_info,
@@ -183,13 +198,16 @@ class DynamicRiskManager:
                 correlation_penalty=correlation_penalty,
                 heat_adjustment=heat_adjustment,
                 regime_adjustment=regime_adjustment,
+                risk_assessment_factor=risk_assessment_factor,
+                risk_assessment_applied=risk_assessment is not None,
                 adjustments=adjustments,
                 current_price=current_price
             )
             
             logger.info(f"Position size calculated: {final_position_size} "
                        f"(Risk Level: {risk_metrics.risk_level.value}, "
-                       f"Confidence: {signal.confidence:.3f})")
+                       f"Confidence: {signal.confidence:.3f}, "
+                       f"RiskAssessment: {'Applied' if risk_assessment else 'Not Available'})")
             
             return final_position_size, risk_metrics
             
@@ -339,6 +357,69 @@ class DynamicRiskManager:
                 adjustment *= trend_bonus
         
         return max(0.3, min(1.5, adjustment))
+    
+    def _apply_risk_assessment_adjustment(self,
+                                         position_size: Decimal,
+                                         risk_assessment: Dict[str, Any]) -> Decimal:
+        """
+        ⭐ NEW: Apply RiskGenius risk assessment-based adjustment to position size.
+        
+        Uses comprehensive risk analysis from RiskGenius agent to further refine
+        position sizing beyond base confidence scaling.
+        
+        Args:
+            position_size: Current calculated position size
+            risk_assessment: Risk assessment dictionary from RiskGenius agent containing:
+                - overall_risk_level: str ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')
+                - position_size_multiplier: float (0.5-1.5)
+                - risk_warnings: List[str]
+                - max_exposure_percentage: float
+                
+        Returns:
+            Adjusted position size based on detailed risk assessment
+        """
+        if not risk_assessment:
+            return position_size
+        
+        try:
+            # Extract risk metrics from RiskGenius assessment
+            overall_risk_level = risk_assessment.get('overall_risk_level', 'MEDIUM')
+            position_multiplier = risk_assessment.get('position_size_multiplier', 1.0)
+            risk_warnings = risk_assessment.get('risk_warnings', [])
+            
+            # Apply position size multiplier from RiskGenius
+            # This directly uses the recommendation from the risk expert
+            risk_factor = float(position_multiplier)
+            
+            # Additional penalty for critical risk warnings
+            if overall_risk_level == 'CRITICAL':
+                risk_factor *= 0.5  # 50% reduction for critical risk
+                logger.warning(f"CRITICAL risk level detected, reducing position by 50%")
+            elif overall_risk_level == 'HIGH':
+                risk_factor *= 0.8  # 20% reduction for high risk
+                logger.info(f"HIGH risk level detected, reducing position by 20%")
+            
+            # Log risk warnings
+            if risk_warnings:
+                logger.warning(f"Risk warnings from RiskGenius: {', '.join(risk_warnings[:3])}")
+            
+            # Apply adjustment
+            adjusted_size = position_size * Decimal(str(risk_factor))
+            
+            logger.debug(
+                f"RiskGenius adjustment: "
+                f"risk_level={overall_risk_level}, "
+                f"multiplier={position_multiplier:.3f}, "
+                f"final_factor={risk_factor:.3f}, "
+                f"original={position_size}, "
+                f"adjusted={adjusted_size}"
+            )
+            
+            return adjusted_size
+            
+        except Exception as e:
+            logger.warning(f"Risk assessment adjustment failed: {str(e)}, using original size")
+            return position_size
     
     async def _apply_final_limits(self,
                                 position_size: Decimal,
