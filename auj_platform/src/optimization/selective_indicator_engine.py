@@ -264,12 +264,51 @@ class SelectiveIndicatorEngine:
             # Validate and finalize selections
             await self._validate_final_selections()
             
+            # ✅ BUG #7 FIX: Cleanup cache to prevent memory leaks
+            self.cleanup_cache()
+            
             self.logger.info("Elite sets updated successfully")
             return self.elite_sets
             
         except Exception as e:
             self.logger.error(f"Error updating elite sets: {str(e)}")
             raise
+
+    def cleanup_cache(self) -> None:
+        """
+        ✅ BUG #7 FIX: Cleanup cache to prevent memory leaks.
+        Removes stale indicators and limits history size.
+        """
+        try:
+            # 1. Remove indicators that are no longer active
+            # This prevents accumulation of temporary or deactivated indicators
+            active_indicators = set(get_active_indicators())
+            current_indicators = list(self.indicator_performance_history.keys())
+            
+            removed_count = 0
+            for ind in current_indicators:
+                if ind not in active_indicators:
+                    del self.indicator_performance_history[ind]
+                    removed_count += 1
+            
+            # 2. Enforce history limit (safety check)
+            # Reduce history size to conserve memory
+            max_history = 50  # Reduced from 100
+            for ind in self.indicator_performance_history:
+                if len(self.indicator_performance_history[ind]) > max_history:
+                    self.indicator_performance_history[ind] = \
+                        self.indicator_performance_history[ind][-max_history:]
+            
+            # 3. Explicit garbage collection suggestion
+            # Helpful for long-running processes
+            import gc
+            gc.collect()
+            
+            if removed_count > 0:
+                self.logger.info(f"Cache cleanup: Removed {removed_count} stale indicators")
+            
+        except Exception as e:
+            self.logger.error(f"Cache cleanup failed: {e}")
 
     async def _update_performance_metrics(self, 
                                         validation_results: Dict[str, Any], 

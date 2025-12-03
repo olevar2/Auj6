@@ -18,6 +18,7 @@ FIXES IMPLEMENTED:
 - Added HierarchyManager integration
 - Removed unreachable code blocks
 - FIXED: Changed position_history from unlimited List to deque(maxlen=1000) to prevent memory leak
+- FIXED Bug #2: Added snapshot protection in monitoring loops to prevent concurrent modification errors
 """
 
 import asyncio
@@ -150,6 +151,7 @@ class DealMonitoringTeams:
     - Added position_history initialization
     - Fixed DealGrade enum usage
     - Removed unreachable code
+    - FIXED Bug #2: Race condition protection in monitoring loops
     """
 
     def __init__(self,
@@ -605,7 +607,8 @@ class DealMonitoringTeams:
         """Risk team monitoring implementation."""
         config = self.team_configs[MonitoringTeam.RISK_TEAM]
 
-        for deal_id, position in self.active_positions.items():
+        # FIXED Bug #2: Create snapshot to prevent concurrent modification during iteration
+        for deal_id, position in list(self.active_positions.items()):
             try:
                 # Check individual position risk
                 position_risk = abs(float(position.unrealized_pnl)) / float(position.entry_price * position.quantity)
@@ -648,7 +651,8 @@ class DealMonitoringTeams:
 
     async def _performance_team_monitoring(self):
         """Performance team monitoring implementation."""
-        for deal_id, position in self.active_positions.items():
+        # FIXED Bug #2: Create snapshot to prevent concurrent modification during iteration
+        for deal_id, position in list(self.active_positions.items()):
             try:
                 old_grade = position.grade
                 
@@ -675,7 +679,8 @@ class DealMonitoringTeams:
         """Technical team monitoring implementation."""
         config = self.team_configs[MonitoringTeam.TECHNICAL_TEAM]
 
-        for deal_id, position in self.active_positions.items():
+        # FIXED Bug #2: Create snapshot to prevent concurrent modification during iteration
+        for deal_id, position in list(self.active_positions.items()):
             try:
                 # Check for significant price movements
                 price_change = abs(float(position.current_price - position.entry_price)) / float(position.entry_price)

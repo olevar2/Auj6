@@ -72,6 +72,9 @@ except ImportError:
 # Messaging coordinator
 from ..coordination.messaging_coordinator import MessagingCoordinator
 
+# ✅ BUG #35 FIX: Trading Orchestrator - The Missing Loop!
+from .orchestrator import TradingOrchestrator
+
 
 # ============================================================================
 # FACTORY FUNCTIONS FOR UNIFIED PROVIDERS
@@ -281,6 +284,15 @@ class PlatformContainer(containers.DeclarativeContainer):
         config=config
     )
 
+    # ✅ BUG #35 FIX: Trading Orchestrator - CRITICAL MISSING COMPONENT!
+    # This orchestrator runs the hourly trading loop that executes analysis cycles
+    trading_orchestrator = providers.Singleton(
+        TradingOrchestrator,
+        genius_coordinator=genius_agent_coordinator,
+        config_manager=unified_config_manager,
+        execution_handler=execution_handler
+    )
+
 
 class ApplicationContainer(containers.DeclarativeContainer):
     """
@@ -305,6 +317,7 @@ class ApplicationContainer(containers.DeclarativeContainer):
         regime_classifier=platform.regime_classifier,
         hierarchy_manager=platform.hierarchy_manager,
         genius_agent_coordinator=platform.genius_agent_coordinator,
+        trading_orchestrator=platform.trading_orchestrator,  # ✅ BUG #35 FIX
         data_provider_manager=platform.data_provider_manager,
         selective_indicator_engine=platform.selective_indicator_engine,
         dynamic_risk_manager=platform.dynamic_risk_manager,
@@ -335,6 +348,7 @@ class AUJPlatformDI:
                  regime_classifier: RegimeClassifier,
                  hierarchy_manager: HierarchyManager,
                  genius_agent_coordinator: GeniusAgentCoordinator,
+                 trading_orchestrator,  # ✅ BUG #35 FIX: Trading Orchestrator
                  data_provider_manager: DataProviderManager,
                  selective_indicator_engine: SelectiveIndicatorEngine,
                  dynamic_risk_manager: DynamicRiskManager,
@@ -362,6 +376,7 @@ class AUJPlatformDI:
         # Platform systems
         self.hierarchy_manager = hierarchy_manager
         self.coordinator = genius_agent_coordinator
+        self.orchestrator = trading_orchestrator  # ✅ BUG #35 FIX
         self.data_manager = data_provider_manager
         self.indicator_engine = selective_indicator_engine
         self.risk_manager = dynamic_risk_manager
@@ -491,17 +506,42 @@ class AUJPlatformDI:
         self.logger.info("✅ Robust Feedback Loop initialized with DI")
 
     async def start(self):
-        """Start the platform's main execution loop."""
+        """
+        Start the platform's main execution loop.
+        
+        ✅ BUG #35 FIX: Now runs TradingOrchestrator alongside feedback loop!
+        
+        Before: Only feedback loop (22:00 UTC daily) - NO TRADING!
+        After: Orchestrator (hourly trading) + Feedback loop (daily learning)
+        """
         if not self.initialized:
             raise Exception("Platform not initialized. Call initialize() first.")
 
         self.running = True
+        self.logger.info("=" * 80)
         self.logger.info("🚀 Starting AUJ Platform main execution loop with DI")
         self.logger.info("💰 Mission: Sustainable profits for humanitarian aid")
         self.logger.info("🛡️ Anti-overfitting framework active")
-
-        # Start the daily feedback loop
+        self.logger.info("=" * 80)
+        
+        # ✅ BUG #35 FIX: Start the TRADING ORCHESTRATOR!
+        # This is the CRITICAL missing piece - without this, the platform NEVER trades!
+        self.logger.info("🎯 Starting Trading Orchestrator - HOURLY TRADING ENABLED!")
+        await self.orchestrator.start()
+        self.logger.info("✅ Trading Orchestrator is running - platform will now trade!")
+        
+        # Start the daily feedback loop (for learning and optimization)
+        self.logger.info("📚 Starting Daily Feedback Loop - LEARNING ENABLED!")
         await self.feedback_loop.start()
+        self.logger.info("✅ Feedback Loop is running - platform will learn daily!")
+        
+        self.logger.info("=" * 80)
+        self.logger.info("🎊 PLATFORM FULLY OPERATIONAL!")
+        self.logger.info("🔄 Hourly Trading: ✅ ACTIVE")
+        self.logger.info("📈 Daily Learning: ✅ ACTIVE")
+        self.logger.info("💝 Every trade supports sick children and families")
+        self.logger.info("=" * 80)
+
 
     async def shutdown(self):
         """Gracefully shutdown the platform."""
@@ -512,7 +552,12 @@ class AUJPlatformDI:
         self.running = False
 
         try:
-            # Stop feedback loop first
+            # Stop orchestrator first (stop trading immediately)
+            if self.orchestrator:
+                await self.orchestrator.stop()
+                self.logger.info("✅ Trading Orchestrator stopped")
+            
+            # Stop feedback loop
             if self.feedback_loop:
                 await self.feedback_loop.stop()
                 self.logger.info("✅ Feedback loop stopped")

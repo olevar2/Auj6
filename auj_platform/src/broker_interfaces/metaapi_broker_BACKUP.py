@@ -3,13 +3,9 @@ MetaApi Broker Interface for AUJ Platform
 
 Implements the broker interface using MetaApi cloud service.
 Provides all trading operations for Linux deployment.
-
-Bug #36 FIX: Implemented actual modify_position() and cancel_order() functions
-using MetaApi REST API endpoints instead of placeholder returns.
 """
 
 import asyncio
-import aiohttp
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
@@ -50,12 +46,6 @@ class MetaApiBroker(BaseBroker):
         self.max_slippage = config.get('max_slippage', 3)  # pips
         self.default_magic = config.get('default_magic', 12345)
         self.risk_checks_enabled = config.get('risk_checks_enabled', True)
-        
-        # MetaApi Direct API access (for modify/cancel operations)
-        self.api_token = config.get('api_token', '')
-        self.account_id = config.get('account_id', '')
-        self.region = config.get('region', 'london')
-        self.client_url = f"https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai"
         
         logger.info("MetaApi Broker initialized for Linux deployment")
     
@@ -440,14 +430,10 @@ class MetaApiBroker(BaseBroker):
                             sl: Optional[float] = None,
                             tp: Optional[float] = None) -> Dict[str, Any]:
         """
-        Modify position stop loss and take profit using MetaApi REST API.
-        
-        BUG #36 FIX: Real implementation using MetaApi trade endpoint.
-        Endpoint: POST /users/current/accounts/{accountId}/trade
-        Action: POSITION_MODIFY
+        Modify position stop loss and take profit.
         
         Args:
-            position_id: Position identifier (ticket number)
+            position_id: Position identifier
             sl: New stop loss price
             tp: New take profit price
             
@@ -457,14 +443,7 @@ class MetaApiBroker(BaseBroker):
         try:
             logger.info(f"🔧 Modifying position {position_id}: SL={sl}, TP={tp}")
             
-            # Validate that at least one parameter is provided
-            if sl is None and tp is None:
-                return {
-                    "success": False,
-                    "error": "At least one of SL or TP must be provided"
-                }
-            
-            # Get current positions to validate position exists
+            # Get current positions
             positions = await self.provider.get_positions()
             target_position = next((pos for pos in positions if pos.get("id") == position_id), None)
             
@@ -474,58 +453,18 @@ class MetaApiBroker(BaseBroker):
                     "error": f"Position {position_id} not found"
                 }
             
-            # Build trade request for position modification
-            trade_request = {
-                "actionType": "POSITION_MODIFY",
-                "positionId": str(position_id)
+            # MetaApi doesn't have direct position modification
+            # We would need to implement this through order modification or trade operations
+            # For now, return a placeholder implementation
+            
+            return {
+                "success": False,
+                "error": "Position modification not yet implemented for MetaApi",
+                "note": "This feature requires additional MetaApi integration"
             }
-            
-            # Add SL/TP if provided
-            if sl is not None:
-                trade_request["stopLoss"] = float(sl)
-                trade_request["stopLossUnits"] = "ABSOLUTE_PRICE"
-            
-            if tp is not None:
-                trade_request["takeProfit"] = float(tp)
-                trade_request["takeProfitUnits"] = "ABSOLUTE_PRICE"
-            
-            # Make direct REST API call to MetaApi
-            headers = {
-                'auth-token': self.api_token,
-                'Content-Type': 'application/json'
-            }
-            
-            url = f"{self.client_url}/users/current/accounts/{self.account_id}/trade"
-            
-            # Use aiohttp session for async request
-            timeout = aiohttp.ClientTimeout(total=30)
-            async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
-                async with session.post(url, json=trade_request) as response:
-                    result = await response.json()
-                    
-                    if response.status == 200:
-                        logger.info(f"✅ Position {position_id} modified successfully")
-                        await self._update_trading_state()
-                        return {
-                            "success": True,
-                            "position_id": position_id,
-                            "sl": sl,
-                            "tp": tp,
-                            "message": "Position modified successfully",
-                            "response": result
-                        }
-                    else:
-                        error_msg = result.get("message", f"API returned status {response.status}")
-                        logger.error(f"❌ Failed to modify position: {error_msg}")
-                        return {
-                            "success": False,
-                            "error": error_msg,
-                            "error_code": result.get("error", "API_ERROR"),
-                            "status": response.status
-                        }
             
         except Exception as e:
-            logger.error(f"❌ Error modifying position {position_id}: {e}")
+            logger.error(f"❌ Error modifying position: {e}")
             return {
                 "success": False,
                 "error": str(e)
@@ -569,73 +508,16 @@ class MetaApiBroker(BaseBroker):
             return []
     
     async def cancel_order(self, order_id: str) -> Dict[str, Any]:
-        """
-        Cancel a pending order using MetaApi REST API.
-        
-        BUG #36 FIX: Real implementation using MetaApi trade endpoint.
-        Endpoint: POST /users/current/accounts/{accountId}/trade
-        Action: ORDER_CANCEL
-        
-        Args:
-            order_id: Order ID (ticket) to cancel
-            
-        Returns:
-            Dict containing cancellation result
-        """
+        """Cancel a pending order."""
         try:
-            logger.info(f"❌ Cancelling order {order_id}")
-            
-            # Get current orders to validate order exists
-            orders = await self.provider.get_orders()
-            target_order = next((order for order in orders if str(order.get("id")) == str(order_id)), None)
-            
-            if not target_order:
-                return {
-                    "success": False,
-                    "error": f"Order {order_id} not found or already executed"
-                }
-            
-            # Build trade request for order cancellation
-            trade_request = {
-                "actionType": "ORDER_CANCEL",
-                "orderId": str(order_id)
+            # This would need to be implemented through MetaApi's order cancellation
+            return {
+                "success": False,
+                "error": "Order cancellation not yet implemented",
+                "note": "Requires additional MetaApi integration"
             }
-            
-            # Make direct REST API call to MetaApi
-            headers = {
-                'auth-token': self.api_token,
-                'Content-Type': 'application/json'
-            }
-            
-            url = f"{self.client_url}/users/current/accounts/{self.account_id}/trade"
-            
-            # Use aiohttp session for async request
-            timeout = aiohttp.ClientTimeout(total=30)
-            async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
-                async with session.post(url, json=trade_request) as response:
-                    result = await response.json()
-                    
-                    if response.status == 200:
-                        logger.info(f"✅ Order {order_id} cancelled successfully")
-                        await self._update_trading_state()
-                        return {
-                            "success": True,
-                            "order_id": order_id,
-                            "message": "Order cancelled successfully",
-                            "response": result
-                        }
-                    else:
-                        error_msg = result.get("message", f"API returned status {response.status}")
-                        logger.error(f"❌ Failed to cancel order: {error_msg}")
-                        return {
-                            "success": False,
-                            "error": error_msg,
-                            "error_code": result.get("error", "API_ERROR"),
-                            "status": response.status
-                        }
-            
         except Exception as e:
-            logger.error(f"❌ Error cancelling order {order_id}: {e}")
+            logger.error(f"Error cancelling order {order_id}: {e}")
             return {
                 "success": False,
                 "error": str(e)
@@ -653,9 +535,7 @@ class MetaApiBroker(BaseBroker):
                 "Real-time data streaming",
                 "Complete MT5 functionality",
                 "Cloud-based infrastructure",
-                "Linux production ready",
-                "Position modification (SL/TP)",  # NEW
-                "Order cancellation"              # NEW
+                "Linux production ready"
             ],
             "status": {
                 "connected": self.connected,
@@ -667,11 +547,6 @@ class MetaApiBroker(BaseBroker):
                 "max_slippage": self.max_slippage,
                 "default_magic": self.default_magic,
                 "risk_checks_enabled": self.risk_checks_enabled
-            },
-            "bug_fixes": {
-                "bug_36_fixed": True,
-                "modify_position_implemented": True,
-                "cancel_order_implemented": True
             }
         }
     

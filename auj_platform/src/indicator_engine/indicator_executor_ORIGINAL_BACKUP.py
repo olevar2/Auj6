@@ -149,9 +149,9 @@ class DataCache:
         with self._lock:
             # Implement LRU eviction if cache is full
             if len(self.cache) >= self.max_cache_size:
-                # BUG #48 FIX: Create snapshot of items first to avoid iteration issues
-                cache_items = list(self.cache.items())
-                oldest_key, _ = min(cache_items, key=lambda item: item[1][1])
+                # Remove oldest entry
+                oldest_key = min(self.cache.keys(), key=lambda k: self.cache[k][1])
+                del self.cache[oldest_key]
             
             self.cache[key] = (data.copy(), datetime.now())
     

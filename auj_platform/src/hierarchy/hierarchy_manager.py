@@ -11,6 +11,11 @@ FIXES IMPLEMENTED:
 - Added missing integration methods: initialize(), register_agent(), get_current_agent_rankings(), update_agent_rank(), save_agent_rankings()
 - Fixed broken __init__ method structure (lines 133-156)
 - All platform integration points restored
+- ✅ BUG #30 FIX: Implemented proper database persistence for agent rankings
+- ✅ Fixed initialize() method to load rankings from database
+- ✅ Fixed save_agent_rankings() method to actually persist data to database
+- ✅ Added _ensure_rankings_table_exists() for database schema creation
+- ✅ Added _load_rankings_from_database() for data restoration
 """
 
 from datetime import datetime, timedelta
@@ -20,6 +25,7 @@ from enum import Enum
 import asyncio
 from collections import defaultdict, deque
 import statistics
+import json
 
 from ..core.exceptions import HierarchyError, ValidationError
 from ..core.data_contracts import (
@@ -28,6 +34,7 @@ from ..core.data_contracts import (
 )
 from ..core.logging_setup import get_logger
 from ..agents.base_agent import BaseAgent
+from ..core.unified_database_manager import get_unified_database
 
 logger = get_logger(__name__)
 
@@ -124,16 +131,20 @@ class HierarchyManager:
     with emphasis on out-of-sample results to prevent overfitting.
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None, database=None):
         """
         Initialize the hierarchy manager.
         
         Args:
             config: Configuration parameters for hierarchy management
+            database: Database manager instance (injected for dependency injection)
         """
         from ..core.unified_config import get_unified_config
         self.config_manager = get_unified_config()
         self.config = config or {}
+        
+        # ✅ BUG #30 FIX: Add database manager with dependency injection support
+        self.database = database or get_unified_database()
         
         self.agents = {}
         self.performance_windows = {}
@@ -164,15 +175,107 @@ class HierarchyManager:
         
         logger.info("Hierarchy Manager initialized")
     
-    async def initialize(self):
-        """Initialize the hierarchy manager and load saved data."""
-        logger.info("Initializing Hierarchy Manager...")
-        # Load any saved agent rankings from database if available
+    async def _ensure_rankings_table_exists(self):
+        """
+        Create agent_rankings table if it doesn't exist.
+        
+        ✅ BUG #30 FIX: New method to ensure database schema exists
+        """
         try:
-            # Placeholder for loading from database
-            pass
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS agent_rankings (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                rankings_data TEXT NOT NULL,
+                last_updated TEXT NOT NULL,
+                CHECK (id = 1)
+            )
+            """
+            await self.database.execute_query(create_table_query)
+            logger.debug("Agent rankings table schema verified/created")
+        except Exception as e:
+            logger.error(f"Failed to create agent_rankings table: {e}")
+            raise HierarchyError(f"Database schema creation failed: {str(e)}")
+    
+    async def _load_rankings_from_database(self) -> bool:
+        """
+        Load agent rankings from database.
+        
+        ✅ BUG #30 FIX: New method to restore rankings from persistent storage
+        
+        Returns:
+            True if data was loaded successfully, False if no data exists
+        """
+        try:
+            result = await self.database.fetch_one(
+                "SELECT rankings_data, last_updated FROM agent_rankings WHERE id = 1"
+            )
+            
+            if not result:
+                logger.debug("No saved rankings found in database")
+                return False
+            
+            # Parse JSON data
+            data = json.loads(result['rankings_data'])
+            
+            # Restore agent rankings
+            self.agent_rankings = {k: float(v) for k, v in data.get('rankings', {}).items()}
+            
+            # Restore hierarchy positions
+            self.current_alpha = data.get('alpha')
+            self.current_betas = data.get('betas', [])
+            self.current_gammas = data.get('gammas', [])
+            self.inactive_agents = data.get('inactive', [])
+            
+            # Restore regime specialists
+            regime_data = data.get('regime_specialists', {})
+            for regime_str, agent_list in regime_data.items():
+                try:
+                    regime = MarketRegime(regime_str)
+                    self.regime_specialists[regime] = agent_list
+                except ValueError:
+                    logger.warning(f"Unknown market regime '{regime_str}' in saved data, skipping")
+            
+            # Restore last update timestamp
+            self.last_ranking_update = datetime.fromisoformat(data.get('last_updated'))
+            
+            logger.info(f"Successfully loaded {len(self.agent_rankings)} agent rankings from database")
+            logger.debug(f"Hierarchy: Alpha={self.current_alpha}, Betas={len(self.current_betas)}, "
+                        f"Gammas={len(self.current_gammas)}, Inactive={len(self.inactive_agents)}")
+            
+            return True
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse rankings JSON data: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to load rankings from database: {e}")
+            return False
+    
+    async def initialize(self):
+        """
+        Initialize the hierarchy manager and load saved data.
+        
+        ✅ BUG #30 FIX: Properly implemented to load rankings from database
+        """
+        logger.info("Initializing Hierarchy Manager...")
+        
+        try:
+            # Ensure database table exists
+            await self._ensure_rankings_table_exists()
+            
+            # Load saved rankings from database
+            loaded = await self._load_rankings_from_database()
+            
+            if loaded:
+                logger.info(f"✅ Loaded {len(self.agent_rankings)} agent rankings from database")
+                # Log current hierarchy state
+                self._log_current_hierarchy()
+            else:
+                logger.info("No saved rankings found, starting with fresh hierarchy")
+            
         except Exception as e:
             logger.warning(f"Could not load saved rankings: {e}")
+            logger.info("Continuing with fresh hierarchy initialization")
         
         logger.info("Hierarchy Manager initialization complete")
     
@@ -183,7 +286,10 @@ class HierarchyManager:
         
         self.agents[agent.name] = agent
         self.performance_windows[agent.name] = PerformanceWindow()
-        self.agent_rankings[agent.name] = 0.0
+        
+        # Only initialize ranking if not already loaded from database
+        if agent.name not in self.agent_rankings:
+            self.agent_rankings[agent.name] = 0.0
         
         logger.info(f"Registered agent: {agent.name}")
 
@@ -213,6 +319,12 @@ class HierarchyManager:
             
             logger.info("Agent rankings updated successfully")
             self._log_current_hierarchy()
+            
+            # ✅ BUG #30 FIX: Auto-save rankings after update
+            try:
+                await self.save_agent_rankings()
+            except Exception as e:
+                logger.error(f"Failed to auto-save rankings after update: {e}")
 
     async def record_trade_result(self, agent_name: str, trade: GradedDeal, is_out_of_sample: bool = False):
         """
@@ -284,11 +396,21 @@ class HierarchyManager:
         
         agent.update_rank(new_rank)
         logger.info(f"Updated {agent_name} rank: {old_rank.value} → {new_rank.value}")
+        
+        # ✅ BUG #30 FIX: Save rankings after manual update
+        try:
+            await self.save_agent_rankings()
+        except Exception as e:
+            logger.error(f"Failed to save rankings after manual rank update: {e}")
     
     async def save_agent_rankings(self):
-        """Save current agent rankings to persistent storage."""
+        """
+        Save current agent rankings to persistent storage.
+        
+        ✅ BUG #30 FIX: Properly implemented to actually save to database
+        """
         try:
-            # Save rankings data
+            # Prepare rankings data
             rankings_data = {
                 "rankings": {k: float(v) for k, v in self.agent_rankings.items()},
                 "alpha": self.current_alpha,
@@ -299,13 +421,27 @@ class HierarchyManager:
                 "regime_specialists": {k.value: v for k, v in self.regime_specialists.items()}
             }
             
-            # Placeholder for saving to database
-            logger.info("Agent rankings saved successfully")
+            # Serialize to JSON
+            json_data = json.dumps(rankings_data)
+            current_time = datetime.utcnow().isoformat()
+            
+            # Save to database using INSERT OR REPLACE (works for SQLite)
+            # For PostgreSQL this would use INSERT ... ON CONFLICT, but the database
+            # manager handles the differences internally
+            await self.database.execute_query("""
+                INSERT OR REPLACE INTO agent_rankings (id, rankings_data, last_updated)
+                VALUES (1, ?, ?)
+            """, (json_data, current_time))
+            
+            logger.info(f"✅ Agent rankings saved successfully ({len(self.agent_rankings)} agents)")
+            logger.debug(f"Saved hierarchy: Alpha={self.current_alpha}, "
+                        f"Betas={len(self.current_betas)}, Gammas={len(self.current_gammas)}")
+            
             return rankings_data
             
         except Exception as e:
             logger.error(f"Failed to save agent rankings: {e}")
-            raise
+            raise HierarchyError(f"Rankings persistence failed: {str(e)}")
     
     def _calculate_comprehensive_ranking(self, 
                                        agent_name: str, 

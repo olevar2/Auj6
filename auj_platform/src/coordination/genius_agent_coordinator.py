@@ -1066,6 +1066,11 @@ class GeniusAgentCoordinator:
             # Get current agent rankings from hierarchy manager
             agent_rankings = await self.hierarchy_manager.get_current_rankings()
 
+            # ✅ BUG #8 FIX: Add null check for agent_rankings
+            if not agent_rankings:
+                logger.warning("No agent rankings available - skipping role assignment")
+                return
+
             # Assign roles based on rankings
             alpha_agents = [name for name, rank in agent_rankings.items() if rank == AgentRank.ALPHA]
             beta_agents = [name for name, rank in agent_rankings.items() if rank == AgentRank.BETA]

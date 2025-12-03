@@ -237,7 +237,7 @@ class ExecutionHandler:
                 logger.info("🎯 Execution reports will now be properly recorded!")
                 
             except Exception as e:
-                logger.error(f"⚠️ Failed to initialize PerformanceTracker: {e}", exc_info=True)
+                logger.error(f"⚠️ Failed to initialize PerformanceTracker: {e}")
                 logger.error("⚠️ Performance tracking will be disabled")
                 self.performance_tracker = None
 
@@ -251,7 +251,7 @@ class ExecutionHandler:
             logger.info(f"Performance Tracker Status: {'✅ ACTIVE' if self.performance_tracker else '❌ DISABLED'}")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Execution Handler: {e}", exc_info=True)
+            logger.error(f"Failed to initialize Execution Handler: {e}")
             # NEW: Cleanup on initialization failure
             await self.cleanup()
             raise
@@ -284,7 +284,7 @@ class ExecutionHandler:
                 logger.warning("⚠️ No broker interfaces initialized - trading will not be available")
 
         except Exception as e:
-            logger.warning(f"Could not initialize broker interfaces: {e}", exc_info=True)
+            logger.warning(f"Could not initialize broker interfaces: {e}")
 
     async def _initialize_messaging(self) -> None:
         """Initialize messaging system using injected dependency."""
