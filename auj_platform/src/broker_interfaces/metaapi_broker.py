@@ -556,6 +556,31 @@ class MetaApiBroker(BaseBroker):
             logger.error(f"❌ Error getting current price for {symbol}: {e}")
             return None
     
+    async def get_symbol_info(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """
+        Get symbol information.
+        
+        Args:
+            symbol: Trading symbol
+            
+        Returns:
+            Dict containing symbol information
+        """
+        try:
+            symbol_info = await self.provider.get_symbol_info(symbol)
+            if symbol_info:
+                # Add broker-specific information
+                symbol_info.update({
+                    "broker": "MetaApi",
+                    "timestamp": datetime.now().isoformat()
+                })
+            
+            return symbol_info
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting symbol info for {symbol}: {e}")
+            return None
+
     # Additional MetaApi-specific methods
     
     async def get_orders(self, symbol: Optional[str] = None) -> List[Dict[str, Any]]:

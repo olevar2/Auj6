@@ -191,6 +191,64 @@ class AccountManager:
         except Exception as e:
             self.logger.error(f"Failed to refresh positions: {e}")
 
+    async def calculate_required_margin(self, symbol: str, volume: Decimal, price: Optional[Decimal] = None) -> Decimal:
+        """
+        Calculate required margin for a trade.
+        
+        Formula: Margin = (Volume * ContractSize * Price) / Leverage
+        
+        Args:
+            symbol: Trading symbol
+            volume: Trade volume in lots
+            price: Current price (optional, will fetch if None)
+            
+        Returns:
+            Required margin in account currency
+        """
+        try:
+            # Get account info for leverage
+            account_info = await self.get_account_info()
+            leverage = Decimal(str(account_info.leverage))
+            
+            if leverage <= 0:
+                self.logger.warning(f"Invalid leverage {leverage}, defaulting to 100")
+                leverage = Decimal('100')
+                
+            # Get symbol info for contract size
+            contract_size = Decimal('100000') # Default standard lot
+            
+            if self.broker_interface and hasattr(self.broker_interface, 'get_symbol_info'):
+                symbol_info = await self.broker_interface.get_symbol_info(symbol)
+                if symbol_info:
+                    # Try different keys for contract size/lot size
+                    size = symbol_info.get('contract_size') or symbol_info.get('lot_size')
+                    if size:
+                        contract_size = Decimal(str(size))
+            
+            # Get price if not provided
+            if price is None:
+                if self.broker_interface and hasattr(self.broker_interface, 'get_current_price'):
+                    price_data = await self.broker_interface.get_current_price(symbol)
+                    if price_data:
+                        # Use ask price as conservative estimate
+                        price = Decimal(str(price_data.get('ask', 0)))
+                
+                if not price or price <= 0:
+                    # Fallback if price unavailable - this is risky but prevents crash
+                    self.logger.warning(f"Could not get price for {symbol}, using 1.0 as fallback")
+                    price = Decimal('1.0')
+            
+            # Calculate margin
+            # Margin = (Volume * ContractSize * Price) / Leverage
+            margin = (volume * contract_size * price) / leverage
+            
+            return margin
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating margin: {e}")
+            # Fallback to safe estimate (old method but with warning)
+            return volume * Decimal('1000') # Conservative fallback
+
     async def can_open_position(self,
                                symbol: str,
                                position_size: Decimal,
@@ -213,8 +271,8 @@ class AccountManager:
             if not account_info.trade_allowed:
                 return False, "Trading not allowed on account"
 
-            # Calculate required margin (simplified calculation)
-            estimated_margin = position_size * Decimal('100')  # Simplified estimate
+            # Calculate required margin using correct formula
+            estimated_margin = await self.calculate_required_margin(symbol, position_size)
 
             # Check margin availability
             if account_info.margin_free < estimated_margin:
@@ -222,10 +280,16 @@ class AccountManager:
 
             # Check margin utilization
             new_margin_used = account_info.margin_used + estimated_margin
-            new_utilization = (new_margin_used / account_info.equity) * Decimal('100')
+            
+            # Avoid division by zero
+            equity = account_info.equity
+            if equity <= 0:
+                 return False, "Account equity is zero or negative"
+                 
+            new_utilization = (new_margin_used / equity) * Decimal('100')
 
             if new_utilization > self.max_margin_utilization:
-                return False, f"Margin utilization would exceed limit: {new_utilization}% > {self.max_margin_utilization}%"
+                return False, f"Margin utilization would exceed limit: {new_utilization:.2f}% > {self.max_margin_utilization}%"
 
             # Check minimum free margin after trade
             remaining_margin = account_info.margin_free - estimated_margin

@@ -17,6 +17,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import talib
+import threading
+import logging
 
 from ..base.standard_indicator import StandardIndicatorInterface, DataRequirement, DataType, SignalType, IndicatorResult
 
@@ -32,6 +34,7 @@ class LSTMPricePredictor(StandardIndicatorInterface):
     - Online learning capability
     - Regime-aware prediction adjustment
     - Advanced preprocessing and normalization
+    - **Asynchronous Training** (Non-blocking)
     """
     
     def __init__(self, 
@@ -75,10 +78,15 @@ class LSTMPricePredictor(StandardIndicatorInterface):
         # Training parameters
         self.is_trained = False
         self.training_history = []
+        self.training_lock = threading.Lock()
+        self.is_training = False
+        self.last_training_time = 0
         
         # Feature engineering parameters
         self.feature_periods = [5, 10, 20, 50]
         self.volatility_periods = [10, 20]
+        
+        self.logger = logging.getLogger(__name__)
         
     @property
     def data_requirements(self) -> List[DataRequirement]:
@@ -216,45 +224,80 @@ class LSTMPricePredictor(StandardIndicatorInterface):
         
         return np.array(X), np.array(y)
     
+    def _train_ensemble_background(self, X: np.ndarray, y: np.ndarray):
+        """
+        Background worker for training ensemble models
+        """
+        try:
+            self.logger.info("Starting background LSTM training...")
+            
+            # Split data for training/validation
+            split_idx = int(len(X) * 0.8)
+            X_train, X_val = X[:split_idx], X[split_idx:]
+            y_train, y_val = y[:split_idx], y[split_idx:]
+            
+            new_models = []
+            new_history = []
+            
+            for i in range(self.ensemble_size):
+                # Create model with slight variations
+                model = self._create_lstm_model((X.shape[1], X.shape[2]))
+                
+                # Early stopping
+                early_stopping = EarlyStopping(
+                    monitor='val_loss',
+                    patience=20,
+                    restore_best_weights=True
+                )
+                
+                # Train model
+                history = model.fit(
+                    X_train, y_train,
+                    validation_data=(X_val, y_val),
+                    epochs=200,
+                    batch_size=32,
+                    callbacks=[early_stopping],
+                    verbose=0
+                )
+                
+                new_models.append(model)
+                new_history.append(history.history)
+            
+            # Update models safely
+            with self.training_lock:
+                self.models = new_models
+                self.training_history = new_history
+                self.is_trained = True
+                self.last_X = X
+                self.is_training = False
+                
+            self.logger.info("Background LSTM training completed successfully.")
+            
+        except Exception as e:
+            self.logger.error(f"Background LSTM training failed: {e}")
+            with self.training_lock:
+                self.is_training = False
+
     def _train_ensemble(self, X: np.ndarray, y: np.ndarray) -> None:
         """
-        Train ensemble of LSTM models
+        Initiate training of ensemble of LSTM models in background
         
         Args:
             X: Input sequences
             y: Target sequences
         """
-        # Split data for training/validation
-        split_idx = int(len(X) * 0.8)
-        X_train, X_val = X[:split_idx], X[split_idx:]
-        y_train, y_val = y[:split_idx], y[split_idx:]
-        
-        self.models = []
-        self.training_history = []
-        
-        for i in range(self.ensemble_size):
-            # Create model with slight variations
-            model = self._create_lstm_model((X.shape[1], X.shape[2]))
+        with self.training_lock:
+            if self.is_training:
+                return
+            self.is_training = True
             
-            # Early stopping
-            early_stopping = EarlyStopping(
-                monitor='val_loss',
-                patience=20,
-                restore_best_weights=True
-            )
-            
-            # Train model
-            history = model.fit(
-                X_train, y_train,
-                validation_data=(X_val, y_val),
-                epochs=200,
-                batch_size=32,
-                callbacks=[early_stopping],
-                verbose=0
-            )
-            
-            self.models.append(model)
-            self.training_history.append(history.history)
+        # Start training in a separate thread
+        training_thread = threading.Thread(
+            target=self._train_ensemble_background,
+            args=(X, y),
+            daemon=True
+        )
+        training_thread.start()
     
     def _calculate_prediction_intervals(self, predictions: List[np.ndarray]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -334,18 +377,38 @@ class LSTMPricePredictor(StandardIndicatorInterface):
                     metadata={'error': 'Insufficient samples for LSTM training'}
                 )
             
-            # Train ensemble if not already trained or if significant new data
-            if not self.is_trained or len(X) > len(getattr(self, 'last_X', [])) * 1.2:
+            # Check if training is needed
+            should_train = False
+            if not self.is_trained:
+                should_train = True
+            elif len(X) > len(getattr(self, 'last_X', [])) * 1.2:
+                should_train = True
+                
+            if should_train:
                 self._train_ensemble(X, y)
-                self.is_trained = True
-                self.last_X = X
+                
+            # If not trained yet (and training is running in background), return Neutral
+            if not self.is_trained or not self.models:
+                return IndicatorResult(
+                    signal=SignalType.NEUTRAL,
+                    strength=0.0,
+                    values={},
+                    metadata={
+                        'status': 'Training in progress',
+                        'training_samples': len(X)
+                    }
+                )
             
             # Make predictions with the latest data
             latest_sequence = X[-1:] if len(X) > 0 else X_scaled_df.iloc[-self.sequence_length:].values.reshape(1, self.sequence_length, -1)
             
             # Ensemble predictions
             predictions = []
-            for model in self.models:
+            # Use lock to access models safely
+            with self.training_lock:
+                current_models = list(self.models)
+                
+            for model in current_models:
                 pred_scaled = model.predict(latest_sequence, verbose=0)
                 pred = self.target_scaler.inverse_transform(pred_scaled.reshape(-1, 1)).flatten()
                 predictions.append(pred)
@@ -424,6 +487,11 @@ class LSTMPricePredictor(StandardIndicatorInterface):
             if not self.is_trained or len(self.models) == 0:
                 return
             
+            # Check if already training
+            with self.training_lock:
+                if self.is_training:
+                    return
+            
             # Engineer features for new data
             features_df = self._engineer_features(new_data)
             target = features_df['close'].shift(-self.prediction_horizon)
@@ -441,9 +509,23 @@ class LSTMPricePredictor(StandardIndicatorInterface):
             X, y = self._prepare_sequences(X_scaled_df.dropna(), target_scaled_series)
             
             if len(X) > 0:
-                # Update each model in ensemble
-                for model in self.models:
-                    model.fit(X, y, epochs=1, batch_size=32, verbose=0)
+                # Update each model in ensemble - Quick update can be done in main thread 
+                # or also offloaded. For safety, let's offload if it takes time.
+                # But for 1 epoch it might be fast. Let's offload to be safe.
+                
+                def _update_worker():
+                    with self.training_lock:
+                        if self.is_training: return
+                        self.is_training = True
+                        
+                    try:
+                        for model in self.models:
+                            model.fit(X, y, epochs=1, batch_size=32, verbose=0)
+                    finally:
+                        with self.training_lock:
+                            self.is_training = False
+                            
+                threading.Thread(target=_update_worker, daemon=True).start()
                     
         except Exception as e:
             # Log error but don't fail the update

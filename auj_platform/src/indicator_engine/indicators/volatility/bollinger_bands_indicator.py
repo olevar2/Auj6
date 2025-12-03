@@ -8,6 +8,7 @@ This implementation features:
 - Regime detection and adjustment
 - Advanced statistical models
 - Production-ready error handling
+- **Asynchronous Training** (Non-blocking)
 
 Author: AUJ Platform Development Team
 Version: 1.0.0
@@ -17,6 +18,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 import logging
+import threading
 from dataclasses import dataclass
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
@@ -80,6 +82,10 @@ class BollingerBandsIndicator(StandardIndicatorInterface):
         self.volatility_predictor: Optional[RandomForestRegressor] = None
         self.scaler = StandardScaler()
         self.is_trained = False
+        
+        # Threading control
+        self.training_lock = threading.Lock()
+        self.is_training = False
         
         # Historical data for analysis
         self.price_history: List[float] = []
@@ -331,19 +337,28 @@ class BollingerBandsIndicator(StandardIndicatorInterface):
             if features is None or len(features) < 20:
                 return 0.0, 0.0
             
-            # Train model if not trained
+            # Train model if not trained (Background)
             if not self.is_trained:
                 self._train_volatility_model(features, prices)
             
             # Make prediction
             if self.volatility_predictor is not None:
-                latest_features = features[-1:].reshape(1, -1)
-                prediction = self.volatility_predictor.predict(latest_features)[0]
-                
-                # Calculate confidence based on feature importance
-                confidence = min(0.95, max(0.1, self.volatility_predictor.score(features[-20:], prices[-20:])))
-                
-                return float(prediction), float(confidence)
+                # Need to check if predictor is ready (might be training in background)
+                with self.training_lock:
+                     predictor = self.volatility_predictor
+                     
+                if predictor is not None:
+                    try:
+                        latest_features = features[-1:].reshape(1, -1)
+                        prediction = predictor.predict(latest_features)[0]
+                        
+                        # Calculate confidence based on feature importance
+                        confidence = min(0.95, max(0.1, predictor.score(features[-20:], prices[-20:])))
+                        
+                        return float(prediction), float(confidence)
+                    except:
+                        # Predictor might be in inconsistent state or not fitted yet
+                        return 0.0, 0.0
             
             return 0.0, 0.0
             
@@ -435,11 +450,10 @@ class BollingerBandsIndicator(StandardIndicatorInterface):
         except Exception:
             return 0.0
     
-    def _train_volatility_model(self, features: np.ndarray, prices: np.ndarray):
-        """Train ML model for volatility prediction"""
+    def _train_volatility_model_background(self, features: np.ndarray, prices: np.ndarray):
+        """Background worker for volatility model training"""
         try:
-            if len(features) < 20:
-                return
+            self.logger.info("Starting background Bollinger Bands ML training...")
             
             # Prepare target (future volatility)
             targets = []
@@ -452,6 +466,8 @@ class BollingerBandsIndicator(StandardIndicatorInterface):
                     targets.append(0.0)
             
             if len(targets) < 10:
+                with self.training_lock:
+                    self.is_training = False
                 return
             
             # Align features with targets
@@ -461,21 +477,44 @@ class BollingerBandsIndicator(StandardIndicatorInterface):
             scaled_features = self.scaler.fit_transform(aligned_features)
             
             # Train model
-            self.volatility_predictor = RandomForestRegressor(
+            predictor = RandomForestRegressor(
                 n_estimators=50,
                 max_depth=10,
                 random_state=42,
                 n_jobs=1
             )
             
-            self.volatility_predictor.fit(scaled_features, targets)
-            self.is_trained = True
+            predictor.fit(scaled_features, targets)
             
-            self.logger.debug("ML volatility model trained successfully")
+            with self.training_lock:
+                self.volatility_predictor = predictor
+                self.is_trained = True
+                self.is_training = False
+            
+            self.logger.info("Background Bollinger Bands ML training completed successfully.")
             
         except Exception as e:
-            self.logger.warning(f"ML model training failed: {e}")
-            self.is_trained = False
+            self.logger.error(f"Background Bollinger Bands ML training failed: {e}")
+            with self.training_lock:
+                self.is_training = False
+
+    def _train_volatility_model(self, features: np.ndarray, prices: np.ndarray):
+        """Train ML model for volatility prediction in background"""
+        if len(features) < 20:
+            return
+            
+        with self.training_lock:
+            if self.is_training:
+                return
+            self.is_training = True
+            
+        # Start training in background thread
+        training_thread = threading.Thread(
+            target=self._train_volatility_model_background,
+            args=(features, prices),
+            daemon=True
+        )
+        training_thread.start()
     
     def _update_history(self, price: float, volatility: float, regime: str):
         """Update historical data for analysis"""
