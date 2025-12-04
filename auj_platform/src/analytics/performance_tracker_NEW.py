@@ -177,10 +177,6 @@ class PerformanceTracker:
         # ✅ FIX #7F: Add periodic cleanup
         self.cleanup_interval_hours = self.config.get('cleanup_interval_hours', 24)
         self.last_cleanup = datetime.utcnow()
-        
-        # ✅ FIX #5: Add thread safety for cache operations
-        import threading
-        self._cache_lock = threading.RLock()
 
         # Initialize database
         self._initialize_database()
@@ -588,16 +584,8 @@ class PerformanceTracker:
         # Grade the trade
         graded_deal = self._grade_trade(trade_record, reason)
 
-        # ✅ FIX #7F & #6: Move to completed trades with proper index sync
+        # ✅ FIX #7F: Move to completed trades (deque + index)
         del self.active_trades[trade_id]
-        
-        # ✅ FIX #6: Check if deque is full - remove oldest from index before append
-        if len(self.completed_trades) >= self.completed_trades.maxlen:
-            # Deque will evict oldest - remove it from index too
-            oldest_trade = self.completed_trades[0]
-            self.completed_trades_index.pop(oldest_trade.trade_id, None)
-            logger.debug(f"Evicted oldest trade from index: {oldest_trade.trade_id}")
-        
         self.completed_trades.append(trade_record)
         self.completed_trades_index[trade_id] = trade_record
 
@@ -609,9 +597,6 @@ class PerformanceTracker:
 
         # Invalidate relevant caches
         self._invalidate_performance_cache(trade_record.generating_agent)
-        
-        # ✅ FIX #1: Call periodic expiry cleanup
-        self._cleanup_expired_cache_entries()
         
         # ✅ FIX #7F: Periodic cleanup
         self._maybe_run_cleanup()
@@ -861,11 +846,12 @@ class PerformanceTracker:
         Returns:
             Comprehensive performance metrics
         """
-        # ✅ FIX #1 & #2: Use new cache methods
+        # Check cache first
         cache_key = f"{agent_name}_{validation_type}_{days_back}"
-        cached_result = self.get_cached_performance(cache_key)
-        if cached_result is not None:
-            return cached_result
+        if (cache_key in self.performance_cache and
+            cache_key in self.cache_expiry and
+            datetime.utcnow() < self.cache_expiry[cache_key]):
+            return self.performance_cache[cache_key]
 
         # Calculate metrics
         cutoff_date = datetime.utcnow() - timedelta(days=days_back)
@@ -885,8 +871,9 @@ class PerformanceTracker:
         # Calculate comprehensive metrics
         metrics = self._calculate_comprehensive_metrics(relevant_trades, agent_name)
 
-        # ✅ FIX #1 & #2: Use new cache setter
-        self.set_cached_performance(cache_key, metrics)
+        # Cache results
+        self.performance_cache[cache_key] = metrics
+        self.cache_expiry[cache_key] = datetime.utcnow() + self.cache_duration
 
         return metrics
 
@@ -1002,88 +989,12 @@ class PerformanceTracker:
 
     def _invalidate_performance_cache(self, agent_name: str):
         """Invalidate cached performance metrics for an agent."""
-        # ✅ FIX #4: Optimized single-pass deletion with safety
-        keys_to_remove = []
-        for key in list(self.performance_cache.keys()):  # ✅ Create snapshot
-            if key.startswith(agent_name):
-                keys_to_remove.append(key)
-        
+        keys_to_remove = [key for key in self.performance_cache.keys() if key.startswith(agent_name)]
         for key in keys_to_remove:
-            del self.performance_cache[key]
-            self.cache_expiry.pop(key, None)  # ✅ Safe deletion
-    
-    def get_cached_performance(self, cache_key: str) -> Optional[Dict[str, Any]]:
-        """
-        Get cached performance data if available and not expired.
-        
-        ✅ FIX #1 & #2: Proper cache retrieval with automatic expiry cleanup
-        
-        Args:
-            cache_key: Cache key to retrieve
-            
-        Returns:
-            Cached data or None if expired/not found
-        """
-        if cache_key not in self.performance_cache:
-            return None
-        
-        # Check if expired
-        if cache_key in self.cache_expiry:
-            if datetime.utcnow() > self.cache_expiry[cache_key]:
-                # ✅ Remove expired entry automatically
-                del self.performance_cache[cache_key]
-                del self.cache_expiry[cache_key]
-                logger.debug(f"Removed expired cache entry: {cache_key}")
-                return None
-        
-        return self.performance_cache[cache_key]
-    
-    def set_cached_performance(self, cache_key: str, data: Dict[str, Any]):
-        """
-        Set cached performance data with expiry and size management.
-        
-        ✅ FIX #3: Enforces cache size limit BEFORE insertion
-        
-        Args:
-            cache_key: Cache key
-            data: Data to cache
-        """
-        # ✅ FIX #3: Enforce cache size limit BEFORE insertion
-        while len(self.performance_cache) >= self.max_cache_size:
-            if not self.cache_expiry:
-                # Emergency: clear all if no expiry data
-                logger.warning("Cache full but no expiry data - clearing all cache")
-                self.performance_cache.clear()
-                break
-            
-            # Remove oldest entry
-            oldest_key = min(self.cache_expiry, key=self.cache_expiry.get)
-            del self.performance_cache[oldest_key]
-            del self.cache_expiry[oldest_key]
-            logger.debug(f"Evicted old cache entry to enforce size limit: {oldest_key}")
-        
-        # Add new entry with expiry
-        self.performance_cache[cache_key] = data
-        self.cache_expiry[cache_key] = datetime.utcnow() + self.cache_duration
-    
-    def _cleanup_expired_cache_entries(self):
-        """
-        Remove expired cache entries proactively.
-        
-        ✅ FIX #1: Automatic expiry cleanup to prevent memory leak
-        """
-        now = datetime.utcnow()
-        expired_keys = [
-            key for key, expiry in self.cache_expiry.items()
-            if now > expiry
-        ]
-        
-        for key in expired_keys:
-            del self.performance_cache[key]
-            del self.cache_expiry[key]
-        
-        if expired_keys:
-            logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
+            if key in self.performance_cache:
+                del self.performance_cache[key]
+            if key in self.cache_expiry:
+                del self.cache_expiry[key]
 
     def get_out_of_sample_performance_only(self, agent_name: str, days_back: int = 30) -> Dict[str, Any]:
         """

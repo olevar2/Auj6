@@ -25,6 +25,12 @@ Architecture Integration:
 - Integrates with DataProviderManager for data sourcing
 - Collaborates with SelectiveIndicatorEngine for optimal indicator selection
 - Feeds calculated indicators to agents for analysis and decision making
+
+BUG FIXES IN THIS VERSION:
+- ✅ Bug #38 FIXED: Removed dangerous _calculate_placeholder that returned fake SMA data
+- ✅ Added FAILED_NOT_IMPLEMENTED status for proper error handling
+- ✅ Added tracking for missing indicators in execution stats
+- ✅ Proper error propagation instead of silent fake data
 """
 
 import asyncio
@@ -73,6 +79,7 @@ class ExecutionStatus(Enum):
     FAILED_CALCULATION_ERROR = "failed_calculation_error"
     SKIPPED_INACTIVE = "skipped_inactive"
     SKIPPED_UNAVAILABLE_PROVIDER = "skipped_unavailable_provider"
+    FAILED_NOT_IMPLEMENTED = "failed_not_implemented"  # ✅ NEW: Bug #38 fix
 
 class ExecutionPriority(Enum):
     """Priority levels for indicator execution"""
@@ -152,6 +159,7 @@ class DataCache:
                 # BUG #48 FIX: Create snapshot of items first to avoid iteration issues
                 cache_items = list(self.cache.items())
                 oldest_key, _ = min(cache_items, key=lambda item: item[1][1])
+                del self.cache[oldest_key]  # ✅ Delete the oldest entry
             
             self.cache[key] = (data.copy(), datetime.now())
     
@@ -194,13 +202,15 @@ class SmartIndicatorExecutor:
         self.result_cache: Dict[str, IndicatorExecutionResult] = {}
         
         # Performance tracking
+        # ✅ Bug #38 FIX: Added tracking for not-implemented indicators
         self.execution_stats = {
             "total_requests": 0,
             "successful_executions": 0,
             "failed_executions": 0,
             "cache_hits": 0,
             "average_execution_time": 0.0,
-            "provider_usage": {}
+            "provider_usage": {},
+            "not_implemented_indicators": {}  # ✅ NEW: Track missing indicators
         }
         
         # Thread pool for concurrent execution
@@ -220,6 +230,7 @@ class SmartIndicatorExecutor:
         
         self.logger.info("SmartIndicatorExecutor initialized for maximum trading efficiency")
         self.logger.info("Optimized for MetaAPI cross-platform data access and real-time streaming")
+        self.logger.info("✅ Bug #38 FIXED: Dangerous placeholder fallback removed")
 
     async def execute_indicators(self, 
                                 requests: List[IndicatorExecutionRequest]) -> List[IndicatorExecutionResult]:
@@ -446,11 +457,26 @@ class SmartIndicatorExecutor:
         except Exception as e:
             execution_time = time.time() - start_time
             
+            # ✅ Bug #38 FIX: Track not-implemented indicators separately
+            if isinstance(e, NotImplementedError):
+                status = ExecutionStatus.FAILED_NOT_IMPLEMENTED
+                # Track which indicator is missing
+                if request.indicator_name not in self.execution_stats["not_implemented_indicators"]:
+                    self.execution_stats["not_implemented_indicators"][request.indicator_name] = 0
+                self.execution_stats["not_implemented_indicators"][request.indicator_name] += 1
+                self.logger.error(
+                    f"❌ Indicator '{request.indicator_name}' not implemented. "
+                    f"This indicator needs to be registered in the indicator registry. "
+                    f"Request by agent: {request.agent_name or 'unknown'}"
+                )
+            else:
+                status = ExecutionStatus.FAILED_CALCULATION_ERROR
+            
             return IndicatorExecutionResult(
                 indicator_name=request.indicator_name,
                 symbol=request.symbol,
                 timeframe=request.timeframe,
-                status=ExecutionStatus.FAILED_CALCULATION_ERROR,
+                status=status,
                 error_message=f"Calculation error: {str(e)}",
                 execution_time=execution_time,
                 data_provider_used=provider_name
@@ -485,6 +511,9 @@ class SmartIndicatorExecutor:
         
         This method now invokes the actual indicator classes from the indicators directory
         instead of using placeholder calculations, solving the critical architectural flaw.
+        
+        ✅ Bug #38 FIXED: No longer returns fake SMA data for missing indicators.
+        Now raises NotImplementedError to prevent silent data corruption.
         """
         
         # Try to use the indicator registry for dynamic invocation
@@ -540,13 +569,14 @@ class SmartIndicatorExecutor:
         elif indicator_name == "exponential_moving_average_indicator":
             return await self._calculate_ema(data, periods)
         else:
-            # Last resort: use enhanced placeholder with warning
-            self.logger.warning(
-                f"⚠️ Indicator {indicator_name} calculation not available. "
-                f"Using basic trend analysis as fallback. "
-                f"Please ensure the indicator is properly registered."
+            # ✅ Bug #38 FIX: Raise error instead of returning fake SMA data
+            # This prevents agents from making decisions based on completely wrong indicators
+            raise NotImplementedError(
+                f"Indicator '{indicator_name}' is not implemented. "
+                f"Available fallbacks: rsi_indicator, macd_indicator, bollinger_bands_indicator, "
+                f"simple_moving_average_indicator, exponential_moving_average_indicator. "
+                f"Please register this indicator in the indicator registry or add it to fallback implementations."
             )
-            return await self._calculate_placeholder(data, indicator_name, periods)
 
     async def _calculate_rsi(self, data: pd.DataFrame, periods: int = 14) -> Dict[str, Any]:
         """Calculate RSI indicator"""
@@ -651,23 +681,10 @@ class SmartIndicatorExecutor:
             }
         }
 
-    async def _calculate_placeholder(self, data: pd.DataFrame, indicator_name: str, periods: int) -> Dict[str, Any]:
-        """Placeholder calculation for indicators not yet implemented"""
-        # Return basic trend analysis as placeholder
-        close = data['close'].astype(float)
-        sma = close.rolling(window=periods).mean()
-        
-        result_data = data.copy()
-        result_data[f'{indicator_name}_value'] = sma
-        
-        return {
-            "data": result_data,
-            "values": {
-                "indicator_value": float(sma.iloc[-1]) if not sma.empty else None,
-                "trend": "bullish" if close.iloc[-1] > sma.iloc[-1] else "bearish" 
-                        if not close.empty and not sma.empty else "neutral"
-            }
-        }
+    # ✅ Bug #38 FIX: _calculate_placeholder method REMOVED ENTIRELY
+    # This dangerous method has been deleted to prevent fake data corruption.
+    # Missing indicators now properly raise NotImplementedError instead of
+    # returning misleading SMA data disguised as the requested indicator.
 
     def _update_execution_stats(self, results: List[IndicatorExecutionResult], total_time: float) -> None:
         """Update execution statistics for performance monitoring"""
@@ -698,6 +715,17 @@ class SmartIndicatorExecutor:
     def get_execution_stats(self) -> Dict[str, Any]:
         """Get current execution statistics"""
         return self.execution_stats.copy()
+    
+    def get_missing_indicators(self) -> Dict[str, int]:
+        """
+        Get list of indicators that were requested but not implemented.
+        
+        ✅ NEW METHOD: Bug #38 fix - helps identify which indicators need to be added
+        
+        Returns:
+            Dict mapping indicator names to request counts
+        """
+        return self.execution_stats.get("not_implemented_indicators", {}).copy()
 
     def clear_cache(self) -> None:
         """Clear all cached data"""
