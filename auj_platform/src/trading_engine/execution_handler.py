@@ -26,7 +26,10 @@ from decimal import Decimal, ROUND_HALF_UP
 import uuid
 import logging
 from contextlib import asynccontextmanager
-from collections import defaultdict
+from collections import defaultdict, deque
+import json
+import statistics
+from pathlib import Path
 
 from ..core.data_contracts import (
     TradeSignal, TradeDirection, TradeStatus, ConfidenceLevel,
@@ -167,9 +170,16 @@ class ExecutionHandler:
 
         # Execution state with concurrency control
         self.active_orders: Dict[str, ExecutionOrder] = {}
-        self.active_orders_lock = asyncio.Lock()  # NEW: Race condition fix
+        self.active_orders_lock = asyncio.Lock()
         self.execution_queue: List[ExecutionOrder] = []
-        self.execution_history: List[ExecutionReport] = []
+        
+        # ✅ FIX #7A: deque with archiving
+        max_history = config_manager.get_int('execution.max_history_size', 1000)
+        self.execution_history: deque = deque(maxlen=max_history)
+        self.archive_path = Path(config_manager.get('execution.archive_path', 'data/execution_archive'))
+        self.archive_enabled = config_manager.get_bool('execution.enable_archiving', True)
+        if self.archive_enabled:
+            self.archive_path.mkdir(parents=True, exist_ok=True)
 
         # Configuration parameters
         self.max_slippage_percent = config_manager.get_float('trading.max_slippage_percent', 0.5)
@@ -184,7 +194,18 @@ class ExecutionHandler:
         self.total_slippage = Decimal('0')
         self.total_costs = Decimal('0')
 
-        # Execution optimization
+        # ✅ FIX #7B & #7C: Rolling windows instead of unbounded dicts
+        rolling_size = config_manager.get_int('execution.venue_rolling_window', 1000)
+        self.venue_executions: Dict[ExecutionVenue, deque] = defaultdict(
+            lambda: deque(maxlen=rolling_size)
+        )
+        
+        symbol_rolling = config_manager.get_int('execution.symbol_rolling_window', 500)
+        self.symbol_executions: Dict[str, deque] = defaultdict(
+            lambda: deque(maxlen=symbol_rolling)
+        )
+        
+        # Legacy for backward compatibility
         self.venue_performance: Dict[ExecutionVenue, Dict[str, float]] = {}
         self.symbol_execution_stats: Dict[str, Dict[str, Any]] = {}
 
@@ -213,33 +234,43 @@ class ExecutionHandler:
             await self.account_manager.initialize()
             logger.info("Account Manager initialized")
 
-            # ✅ BUG #1 FIX: Initialize PerformanceTracker properly!
-            # This was MISSING in the original code, causing 100% data loss at line 1015
+            # ✅ FIX #7E: Robust PerformanceTracker with fallback
             try:
                 from ..analytics.performance_tracker import PerformanceTracker
+                from ..core.unified_database_manager import get_unified_database
                 
+                database = get_unified_database()
                 performance_config = self.config_manager.get_dict('performance_tracker', {})
-                database_path = self.config_manager.get('performance_tracker.database_path', 
-                                                       'data/performance_tracking.db')
                 
-                # Create PerformanceTracker instance
                 self.performance_tracker = PerformanceTracker(
                     config=performance_config,
-                    database=None,  # Will use unified database
-                    walk_forward_validator=None,  # Can be injected later
-                    database_path=database_path
+                    database=database,
+                    walk_forward_validator=None,
+                    database_path=None
                 )
                 
-                # Initialize async components
                 await self.performance_tracker.initialize()
-                
                 logger.info("✅ PerformanceTracker initialized successfully - BUG #1 FIXED!")
-                logger.info("🎯 Execution reports will now be properly recorded!")
                 
             except Exception as e:
-                logger.error(f"⚠️ Failed to initialize PerformanceTracker: {e}", exc_info=True)
-                logger.error("⚠️ Performance tracking will be disabled")
+                logger.critical(f"❌ CRITICAL: Failed to initialize PerformanceTracker: {e}", exc_info=True)
+                logger.critical("⚠️ Execution will continue but ALL PERFORMANCE DATA WILL BE LOST!")
+                logger.critical("⚠️ This should be investigated immediately!")
+                
+                # Send alert if messaging available
+                if self.messaging_service:
+                    try:
+                        await self.messaging_service.publish_system_alert({
+                            'severity': 'CRITICAL',
+                            'component': 'execution_handler',
+                            'message': 'PerformanceTracker initialization failed',
+                            'error': str(e)
+                        })
+                    except:
+                        pass
+                
                 self.performance_tracker = None
+                self._enable_fallback_logging()
 
             # Initialize broker interfaces
             await self._initialize_broker_interfaces()
@@ -310,7 +341,7 @@ class ExecutionHandler:
             self.messaging_service = None
 
     async def cleanup(self) -> None:
-        """Cleanup resources."""
+        """✅ FIX #7I: Complete cleanup of all resources."""
         try:
             if self.account_manager:
                 await self.account_manager.cleanup()
@@ -319,11 +350,26 @@ class ExecutionHandler:
                 if hasattr(broker_interface, 'cleanup'):
                     await broker_interface.cleanup()
 
+            # ✅ NEW: Clean execution resources
+            self.execution_history.clear()
+            self.venue_executions.clear()
+            self.symbol_executions.clear()
+            
+            async with self.active_orders_lock:
+                self.active_orders.clear()
+            
+            # Save final statistics
+            self._save_final_statistics()
+            
+            # ✅ NEW: Cleanup PerformanceTracker
+            if self.performance_tracker and hasattr(self.performance_tracker, 'cleanup'):
+                await self.performance_tracker.cleanup()
+
             if self.messaging_service:
                 await self.messaging_service.stop()
                 logger.info("✅ Messaging service stopped")
 
-            logger.info("Execution Handler cleanup completed")
+            logger.info("✅ Complete execution handler cleanup finished")
 
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
@@ -1000,7 +1046,7 @@ class ExecutionHandler:
             return DealGrade.C
 
     def _update_execution_statistics(self, report: ExecutionReport):
-        """Update execution performance statistics."""
+        """\u2705 FIX #7A, #7B, #7C: Update execution statistics with rolling windows."""
         try:
             self.total_executions += 1
 
@@ -1009,25 +1055,45 @@ class ExecutionHandler:
                 self.total_slippage += report.total_slippage
                 self.total_costs += report.total_costs
 
-                # Update venue performance
+                # \u2705 FIX #7B: Store raw execution data in rolling window
                 venue = report.order.venue
-                if venue not in self.venue_performance:
+                execution_data = {
+                    'timestamp': report.timestamp,
+                    'slippage': float(report.total_slippage),
+                    'costs': float(report.total_costs),
+                    'execution_time': report.execution_time_seconds,
+                    'fill_rate': report.fill_rate
+                }
+                self.venue_executions[venue].append(execution_data)
+                
+                # \u2705 FIX #7C: Track symbol-specific performance
+                symbol = report.order.symbol
+                symbol_data = {
+                    'timestamp': report.timestamp,
+                    'direction': report.order.direction.value,
+                    'slippage': float(report.total_slippage),
+                    'execution_time': report.execution_time_seconds,
+                    'grade': report.performance_grade.value
+                }
+                self.symbol_executions[symbol].append(symbol_data)
+
+                # Update legacy venue_performance for backward compatibility
+                venue_stats = self.venue_performance.get(venue, {})
+                if not venue_stats:
                     self.venue_performance[venue] = {
                         'total_executions': 0,
                         'successful_executions': 0,
                         'total_slippage': 0.0,
                         'total_execution_time': 0.0
                     }
-
-                venue_stats = self.venue_performance[venue]
+                    venue_stats = self.venue_performance[venue]
+                
                 venue_stats['total_executions'] += 1
                 venue_stats['successful_executions'] += 1
                 venue_stats['total_slippage'] += float(report.total_slippage)
                 venue_stats['total_execution_time'] += report.execution_time_seconds
-
-                venue_stats['success_rate'] = venue_stats['successful_executions'] / venue_stats['total_executions']
                 
-                # FIXED BUG #1: Prevent division by zero
+                venue_stats['success_rate'] = venue_stats['successful_executions'] / venue_stats['total_executions']
                 if venue_stats['successful_executions'] > 0:
                     venue_stats['avg_slippage'] = venue_stats['total_slippage'] / venue_stats['successful_executions']
                     venue_stats['avg_execution_speed'] = venue_stats['total_execution_time'] / venue_stats['successful_executions']
@@ -1037,32 +1103,36 @@ class ExecutionHandler:
                 
                 venue_stats['fill_rate'] = report.fill_rate
 
-            # Add to execution history
+            # \u2705 FIX #7A: Archive if at capacity before adding
+            if len(self.execution_history) == self.execution_history.maxlen and self.archive_enabled:
+                self._archive_oldest_report(self.execution_history[0])
+            
+            # Add to execution history (deque auto-evicts oldest if full)
             self.execution_history.append(report)
-            if len(self.execution_history) > 1000:
-                self.execution_history.pop(0)
 
         except Exception as e:
             logger.error(f"Failed to update execution statistics: {e}")
 
     async def _post_execution_processing(self, report: ExecutionReport):
         """
-        Perform post-execution processing and notifications.
-        FIXED: Added DealMonitoringTeams integration.
+        ✅ FIX #7E & #7J: Enhanced post-execution with fallback and dual-path DB.
         """
         try:
-            # Record execution in performance tracker
-            # FIXED: Proper error handling to prevent silent failures
+            # Path 1: Record in PerformanceTracker (primary)
             if self.performance_tracker and report.success:
                 try:
                     await self.performance_tracker.record_execution(
                         signal_id=report.order.signal_id,
                         execution_report=report
                     )
-                    logger.debug(f"✅ Execution recorded in performance tracker: {report.execution_id}")
+                    logger.debug(f"✅ Execution recorded in PerformanceTracker: {report.execution_id}")
                 except Exception as tracker_error:
-                    logger.error(f"❌ Failed to record execution in performance tracker: {tracker_error}")
-                    # Don't raise - this is non-critical, execution already succeeded
+                    logger.error(f"❌ PerformanceTracker failed: {tracker_error}")
+                    # ✅ FIX #7E: Fall back to file logging
+                    self._log_to_fallback_file(report)
+            elif not self.performance_tracker and report.success:
+                # ✅ FIX #7E: No PerformanceTracker → use fallback
+                self._log_to_fallback_file(report)
 
             # FIXED: NEW - Send to DealMonitoringTeams
             if report.success and self.deal_monitoring_teams:
@@ -1517,7 +1587,9 @@ class ExecutionHandler:
             return True
 
     def get_execution_statistics(self) -> Dict[str, Any]:
-        """Get execution statistics."""
+        """\u2705 FIX #7D: Thread-safe execution statistics."""
+        active_count = len(self.active_orders)  # Atomic read
+        
         return {
             'total_executions': self.total_executions,
             'successful_executions': self.successful_executions,
@@ -1525,5 +1597,82 @@ class ExecutionHandler:
             'total_slippage': float(self.total_slippage),
             'total_costs': float(self.total_costs),
             'venue_performance': self.venue_performance,
-            'active_orders_count': len(self.active_orders)
+            'active_orders_count': active_count,
+            'history_size': len(self.execution_history)
         }
+    
+    # \u2705 FIX #7E: Fallback logging method
+    def _enable_fallback_logging(self):
+        """Enable fallback execution logging to file when PerformanceTracker fails."""
+        self.fallback_log_path = self.archive_path / 'execution_fallback.jsonl'
+        self.fallback_log_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.warning(f"\u2705 Fallback logging enabled: {self.fallback_log_path}")
+    
+    # \u2705 FIX #7A: Archive oldest report before eviction
+    def _archive_oldest_report(self, report: ExecutionReport):
+        """Archive the oldest execution report before it's evicted from deque."""
+        try:
+            date_str = report.timestamp.strftime('%Y-%m-%d')
+            archive_file = self.archive_path / f"executions_{date_str}.jsonl"
+            
+            report_dict = {
+                'execution_id': report.execution_id,
+                'timestamp': report.timestamp.isoformat(),
+                'symbol': report.order.symbol,
+                'direction': report.order.direction.value,
+                'success': report.success,
+                'slippage': float(report.total_slippage),
+                'costs': float(report.total_costs),
+                'grade': report.performance_grade.value
+            }
+            
+            with open(archive_file, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(report_dict) + '\\n')
+                
+        except Exception as e:
+            logger.error(f"Failed to archive report: {e}")
+    
+    # \u2705 FIX #7E: Fallback file logging
+    def _log_to_fallback_file(self, report: ExecutionReport):
+        """Log execution to fallback file when PerformanceTracker fails."""
+        try:
+            if not hasattr(self, 'fallback_log_path'):
+                return
+                
+            report_dict = {
+                'execution_id': report.execution_id,
+                'timestamp': report.timestamp.isoformat(),
+                'symbol': report.order.symbol,
+                'direction': report.order.direction.value,
+                'success': report.success,
+                'slippage': float(report.total_slippage),
+                'costs': float(report.total_costs),
+                'grade': report.performance_grade.value
+            }
+            
+            with open(self.fallback_log_path, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(report_dict) + '\\n')
+                
+            logger.info(f"\u2705 Logged to fallback file: {report.execution_id}")
+            
+        except Exception as e:
+            logger.error(f"\u274c Fallback logging failed: {e}")
+    
+    # \u2705 FIX #7I: Save final statistics before shutdown
+    def _save_final_statistics(self):
+        """Save final statistics before shutdown."""
+        try:
+            stats_file = Path('data/execution_final_stats.json')
+            stats_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            stats = self.get_execution_statistics()
+            stats['shutdown_time'] = datetime.utcnow().isoformat()
+            
+            with open(stats_file, 'w') as f:
+                json.dump(stats, f, indent=2)
+                
+            logger.info(f"\u2705 Saved final statistics to {stats_file}")
+            
+        except Exception as e:
+            logger.error(f"Failed to save final statistics: {e}")
+

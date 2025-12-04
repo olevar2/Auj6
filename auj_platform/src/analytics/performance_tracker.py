@@ -151,7 +151,12 @@ class PerformanceTracker:
 
         # In-memory tracking structures
         self.active_trades: Dict[str, TradeContextRecord] = {}
-        self.completed_trades: Dict[str, TradeContextRecord] = {}
+        
+        # ✅ FIX #7F: Use deque instead of unbounded dict
+        max_completed = self.config.get('max_completed_trades_in_memory', 10000)
+        self.completed_trades: deque = deque(maxlen=max_completed)
+        self.completed_trades_index: Dict[str, TradeContextRecord] = {}  # For fast lookup
+        
         self.agent_performance: Dict[str, Dict[str, Any]] = defaultdict(dict)
         self.strategy_performance: Dict[str, Dict[str, Any]] = defaultdict(dict)
 
@@ -159,6 +164,7 @@ class PerformanceTracker:
         self.performance_cache: Dict[str, Dict[str, Any]] = {}
         self.cache_expiry: Dict[str, datetime] = {}
         self.cache_duration = timedelta(minutes=5)
+        self.max_cache_size = self.config.get('max_cache_size', 1000)
 
         # Validation tracking
         self.validation_periods: Dict[str, Dict[str, datetime]] = {}
@@ -167,6 +173,10 @@ class PerformanceTracker:
         # Performance windows for rolling metrics
         self.rolling_window_size = self.config.get('rolling_window_size', 100)
         self.agent_rolling_performance: Dict[str, deque] = defaultdict(lambda: deque(maxlen=self.rolling_window_size))
+        
+        # ✅ FIX #7F: Add periodic cleanup
+        self.cleanup_interval_hours = self.config.get('cleanup_interval_hours', 24)
+        self.last_cleanup = datetime.utcnow()
 
         # Initialize database
         self._initialize_database()
@@ -385,7 +395,9 @@ class PerformanceTracker:
                     trade_record = self._dict_to_trade_record(row_dict)
 
                     if row_dict['exit_time']:
-                        self.completed_trades[row_dict['trade_id']] = trade_record
+                        # ✅ FIX #7F: Use deque + index for completed trades
+                        self.completed_trades.append(trade_record)
+                        self.completed_trades_index[row_dict['trade_id']] = trade_record
                     else:
                         self.active_trades[row_dict['trade_id']] = trade_record
 
@@ -572,9 +584,10 @@ class PerformanceTracker:
         # Grade the trade
         graded_deal = self._grade_trade(trade_record, reason)
 
-        # Move to completed trades
+        # ✅ FIX #7F: Move to completed trades (deque + index)
         del self.active_trades[trade_id]
-        self.completed_trades[trade_id] = trade_record
+        self.completed_trades.append(trade_record)
+        self.completed_trades_index[trade_id] = trade_record
 
         # Update rolling performance metrics
         self._update_rolling_metrics(trade_record)
@@ -584,6 +597,9 @@ class PerformanceTracker:
 
         # Invalidate relevant caches
         self._invalidate_performance_cache(trade_record.generating_agent)
+        
+        # ✅ FIX #7F: Periodic cleanup
+        self._maybe_run_cleanup()
 
         logger.info(f"Trade {trade_id} closed: PnL=${trade_record.pnl}, Grade={graded_deal.grade}")
 
@@ -840,9 +856,9 @@ class PerformanceTracker:
         # Calculate metrics
         cutoff_date = datetime.utcnow() - timedelta(days=days_back)
 
-        # Filter trades
+        # Filter trades - iterate through deque
         relevant_trades = []
-        for trade_record in self.completed_trades.values():
+        for trade_record in self.completed_trades:
             if (trade_record.generating_agent == agent_name and
                 trade_record.exit_time and trade_record.exit_time >= cutoff_date):
 
@@ -1628,3 +1644,65 @@ class PerformanceTracker:
         except Exception as e:
             logger.error(f"Failed to save critical performance data: {str(e)}")
             # Don't raise exception during shutdown - log and continue
+
+    def _invalidate_performance_cache(self, agent_name: str):
+        '''? FIX #7G: Invalidate performance cache for an agent.'''
+        keys_to_remove = [k for k in self.performance_cache.keys() if k.startswith(agent_name)]
+        for key in keys_to_remove:
+            del self.performance_cache[key]
+            if key in self.cache_expiry:
+                del self.cache_expiry[key]
+    
+    def _maybe_run_cleanup(self):
+        '''? FIX #7F: Run cleanup if interval has passed.'''
+        now = datetime.utcnow()
+        hours_since_cleanup = (now - self.last_cleanup).total_seconds() / 3600
+        
+        if hours_since_cleanup >= self.cleanup_interval_hours:
+            self._cleanup_old_data()
+            self.last_cleanup = now
+    
+    def _cleanup_old_data(self):
+        '''? FIX #7F & #7H: Clean up old in-memory data.'''
+        try:
+            cutoff = datetime.utcnow() - timedelta(days=30)
+            
+            for agent_name in list(self.agent_rolling_performance.keys()):
+                recent_trades = [
+                    t for t in self.agent_rolling_performance[agent_name]
+                    if t.get('timestamp') and t['timestamp'] > cutoff
+                ]
+                
+                if recent_trades:
+                    self.agent_rolling_performance[agent_name] = deque(
+                        recent_trades,
+                        maxlen=self.rolling_window_size
+                    )
+                else:
+                    del self.agent_rolling_performance[agent_name]
+            
+            if len(self.performance_cache) > self.max_cache_size:
+                oldest_key = min(self.cache_expiry, key=self.cache_expiry.get)
+                del self.performance_cache[oldest_key]
+                del self.cache_expiry[oldest_key]
+            
+            valid_ids = {tr.trade_id for tr in self.completed_trades}
+            invalid_ids = set(self.completed_trades_index.keys()) - valid_ids
+            for trade_id in invalid_ids:
+                del self.completed_trades_index[trade_id]
+            
+            logger.info(f'Cleaned up old data. Agents: {len(self.agent_rolling_performance)}')
+            
+        except Exception as e:
+            logger.error(f'Cleanup failed: {e}')
+    
+    async def cleanup(self):
+        '''? FIX #7F: Cleanup PerformanceTracker resources.'''
+        try:
+            self._cleanup_old_data()
+            self.performance_cache.clear()
+            self.cache_expiry.clear()
+            self.completed_trades_index.clear()
+            logger.info('PerformanceTracker cleanup completed')
+        except Exception as e:
+            logger.error(f'Error during cleanup: {e}')
