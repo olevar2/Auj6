@@ -556,13 +556,12 @@ class UnifiedDatabaseManager:
         query_hash = self._get_query_hash(query, parameters)
 
         # Check cache first - need to handle async cache access
+        # FIXED BUG #3: Removed unnecessary task creation that was causing memory leak
         if use_cache:
             try:
+                # Check if we're in async context
                 loop = asyncio.get_running_loop()
-                # We're in an async context, create task
-                cached_result = asyncio.create_task(self.query_cache.get(query_hash))
-                # This is problematic - we can't await here
-                # For sync context, we'll skip cache check
+                # Skip cache for sync methods in async context
                 cached_result = None
             except RuntimeError:
                 # No event loop, run cache check synchronously

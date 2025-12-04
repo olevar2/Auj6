@@ -486,17 +486,67 @@ class MessagingService:
             return {}
     
     async def purge_queue(self, queue_name: str) -> bool:
-        """Purge messages from a queue (use with caution)."""
+        """Purge messages from a queue using RabbitMQ Management API (use with caution)."""
         try:
             if not self.message_broker:
                 self.logger.warning("⚠️ Message broker not available")
                 return False
             
-            # This would require admin privileges
-            # Implementation depends on RabbitMQ management API
             self.logger.warning(f"⚠️ Queue purge requested for: {queue_name}")
             
-            return True
+            # ✅ FIX Bug #25: Use pika channel.queue_purge (synchronous method)
+            if hasattr(self.message_broker, 'channel') and self.message_broker.channel:
+                try:
+                    # Get event loop to run sync operation
+                    loop = asyncio.get_event_loop()
+                    
+                    # Execute queue_purge in thread pool to avoid blocking
+                    purge_result = await loop.run_in_executor(
+                        None,
+                        self.message_broker.channel.queue_purge,
+                        queue_name
+                    )
+                    
+                    message_count = purge_result.method.message_count if purge_result else 0
+                    self.logger.info(f"✅ Purged {message_count} messages from {queue_name}")
+                    return True
+                    
+                except Exception as channel_error:
+                    self.logger.warning(f"⚠️ Failed to purge via channel: {channel_error}")
+                    # Fall through to management API
+            
+            # ✅ Alternative: Use RabbitMQ Management HTTP API
+            try:
+                import aiohttp
+                
+                rabbit_config = self.config_manager.get_dict('message_broker', {})
+                host = rabbit_config.get('host', 'localhost')
+                mgmt_port = rabbit_config.get('management_port', 15672)
+                username = rabbit_config.get('username', 'guest')
+                password = rabbit_config.get('password', 'guest')
+                vhost = rabbit_config.get('vhost', '/').replace('/', '%2F')  # URL encode
+                
+                # Management API endpoint
+                api_url = f"http://{host}:{mgmt_port}/api/queues/{vhost}/{queue_name}/contents"
+                
+                auth = aiohttp.BasicAuth(username, password)
+                timeout = aiohttp.ClientTimeout(total=10)
+                
+                async with aiohttp.ClientSession(auth=auth, timeout=timeout) as session:
+                    async with session.delete(api_url) as response:
+                        if response.status == 204:
+                            self.logger.info(f"✅ Successfully purged queue {queue_name} via Management API")
+                            return True
+                        elif response.status == 404:
+                            self.logger.warning(f"⚠️ Queue {queue_name} not found")
+                            return False
+                        else:
+                            error_text = await response.text()
+                            raise Exception(f"HTTP {response.status}: {error_text}")
+            
+            except Exception as api_error:
+                self.logger.error(f"❌ Failed to purge via Management API: {api_error}")
+                raise api_error
             
         except Exception as e:
             self.logger.error(f"❌ Failed to purge queue {queue_name}: {e}")

@@ -12,6 +12,7 @@ Key Features:
 - Portfolio-level risk management
 - Real-time risk monitoring and alerts
 - ⭐ NEW: RiskGenius integration for enhanced risk assessment
+- ✅ FIXED: Real volatility and correlation calculations (Bug #37)
 """
 
 import asyncio
@@ -20,6 +21,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import pandas as pd
+import numpy as np
 from decimal import Decimal, ROUND_HALF_UP
 import logging
 import math
@@ -28,7 +30,7 @@ import math
 from ..core.logging_setup import get_logger
 from ..core.data_contracts import (
     TradeSignal, AccountInfo, MarketConditions, TradeDirection, 
-    RiskMetrics, PositionSizeAdjustment, RiskLevel, MarketRegime
+    RiskMetrics, PositionSizeAdjustment, RiskLevel, MarketRegime, Timeframe
 )
 
 logger = get_logger(__name__)
@@ -46,18 +48,21 @@ class DynamicRiskManager:
     - Correlation analysis
     - Market regime adaptation
     - ⭐ NEW: Direct RiskGenius risk assessment integration
+    - ✅ FIXED: Real volatility and correlation calculations (Bug #37)
     """
     
-    def __init__(self, config_manager: Any, portfolio_tracker: Any = None):
+    def __init__(self, config_manager: Any, portfolio_tracker: Any = None, data_provider=None):
         """
         Initialize Dynamic Risk Manager.
         
         Args:
             config_manager: Configuration manager
             portfolio_tracker: Optional portfolio tracker
+            data_provider: Data provider for market data (for volatility and correlation)
         """
         self.config_manager = config_manager
         self.portfolio_tracker = portfolio_tracker
+        self.data_provider = data_provider  # ✅ NEW: Data provider injection
         
         # Load risk parameters
         self.base_risk_params = self._load_base_risk_parameters()
@@ -86,9 +91,14 @@ class DynamicRiskManager:
             'VOLATILE': 0.6
         }
         
+        # ✅ NEW: Volatility and correlation caching
+        self.volatility_cache = {}  # {symbol: (volatility, timestamp)}
+        self.correlation_cache = {}  # {(symbol1, symbol2): (correlation, timestamp)}
+        self.cache_ttl = 3600  # 1 hour cache TTL
+        
         self._validate_risk_parameters()
         
-        logger.info("Dynamic Risk Manager initialized with RiskGenius integration")
+        logger.info("Dynamic Risk Manager initialized with RiskGenius integration and real data calculations")
 
     def _validate_risk_parameters(self):
         """Validate loaded risk parameters."""
@@ -266,12 +276,16 @@ class DynamicRiskManager:
     async def _calculate_volatility_adjustment(self,
                                              symbol: str,
                                              market_conditions: Optional[MarketConditions]) -> float:
-        """Calculate volatility-based position size adjustment."""
+        """
+        ✅ FIXED: Calculate volatility-based position size adjustment using real market data.
+        
+        Bug #37 Fix: This now connects to real market data instead of returning hardcoded 0.5
+        """
         try:
             if market_conditions:
                 volatility = market_conditions.volatility
             else:
-                # Get recent volatility data
+                # ✅ NEW: Get recent volatility data from market
                 volatility = await self._get_symbol_volatility(symbol)
             
             # Normalize volatility (assuming 0-1 scale, where 0.5 is average)
@@ -291,7 +305,11 @@ class DynamicRiskManager:
             return 1.0  # Neutral adjustment
     
     async def _calculate_correlation_penalty(self, symbol: str) -> float:
-        """Calculate correlation penalty to reduce correlated exposure."""
+        """
+        ✅ FIXED: Calculate correlation penalty to reduce correlated exposure using real data.
+        
+        Bug #37 Fix: This now calculates real correlation instead of returning hardcoded 0.0
+        """
         try:
             # Get current open positions
             open_positions = await self._get_open_positions()
@@ -299,7 +317,7 @@ class DynamicRiskManager:
             if not open_positions:
                 return 1.0  # No penalty if no open positions
             
-            # Calculate correlation with open positions
+            # ✅ NEW: Calculate correlation with open positions using real market data
             max_correlation = 0.0
             for position_symbol in open_positions.keys():
                 if position_symbol != symbol:
@@ -519,16 +537,238 @@ class DynamicRiskManager:
         return 1.0
     
     async def _get_symbol_volatility(self, symbol: str) -> float:
-        """Get symbol volatility (placeholder)."""
-        return 0.5  # Default medium volatility
+        """
+        ✅ FIXED (Bug #37): Get symbol volatility using real market data.
+        
+        Previous implementation returned hardcoded 0.5 for all symbols.
+        Now calculates ATR-based volatility from historical price data.
+        
+        Args:
+            symbol: Trading symbol
+            
+        Returns:
+            Normalized volatility value (0.0 - 2.0, where 0.5 is average)
+        """
+        try:
+            # Check cache first
+            cache_key = symbol
+            if cache_key in self.volatility_cache:
+                cached_vol, timestamp = self.volatility_cache[cache_key]
+                if (datetime.now() - timestamp).total_seconds() < self.cache_ttl:
+                    logger.debug(f"Using cached volatility for {symbol}: {cached_vol:.4f}")
+                    return cached_vol
+            
+            # If no data provider, use conservative default
+            if not self.data_provider:
+                logger.warning(f"No data provider available for volatility calculation of {symbol}, using default")
+                return 0.5
+            
+            # Get historical data (last 30 days, 1-hour timeframe)
+            try:
+                end_time = datetime.now()
+                start_time = end_time - timedelta(days=30)
+                
+                # Get OHLCV data
+                ohlcv_data = await self.data_provider.get_ohlcv_data(
+                    symbol=symbol,
+                    timeframe=Timeframe.H1,
+                    start_time=start_time,
+                    end_time=end_time,
+                    count=500  # About 3 weeks of hourly data
+                )
+                
+                if ohlcv_data is None or ohlcv_data.empty:
+                    logger.warning(f"No OHLCV data available for {symbol}, using default volatility")
+                    return 0.5
+                
+                # Calculate ATR (Average True Range) as volatility measure
+                volatility = self._calculate_atr_volatility(ohlcv_data)
+                
+                # Cache the result
+                self.volatility_cache[cache_key] = (volatility, datetime.now())
+                
+                logger.debug(f"Calculated volatility for {symbol}: {volatility:.4f}")
+                return volatility
+                
+            except Exception as e:
+                logger.warning(f"Failed to fetch OHLCV data for {symbol}: {str(e)}, using default")
+                return 0.5
+                
+        except Exception as e:
+            logger.error(f"Volatility calculation failed for {symbol}: {str(e)}, using default")
+            return 0.5  # Fallback to medium volatility
+    
+    def _calculate_atr_volatility(self, ohlcv_data: pd.DataFrame, period: int = 14) -> float:
+        """
+        Calculate ATR-based volatility from OHLCV data.
+        
+        Args:
+            ohlcv_data: DataFrame with columns: open, high, low, close
+            period: ATR period (default 14)
+            
+        Returns:
+            Normalized volatility (0.0 - 2.0)
+        """
+        try:
+            # Ensure we have enough data
+            if len(ohlcv_data) < period + 1:
+                return 0.5
+            
+            # Calculate True Range
+            high = ohlcv_data['high'].values
+            low = ohlcv_data['low'].values
+            close = ohlcv_data['close'].values
+            
+            # True Range = max(high-low, abs(high-prev_close), abs(low-prev_close))
+            tr = np.maximum(
+                high - low,
+                np.maximum(
+                    np.abs(high[1:] - close[:-1]),
+                    np.abs(low[1:] - close[:-1])
+                )
+            )
+            
+            # Calculate ATR
+            atr = np.mean(tr[-period:]) if len(tr) >= period else np.mean(tr)
+            
+            # Normalize ATR by current price
+            current_price = close[-1]
+            if current_price > 0:
+                normalized_atr = (atr / current_price) * 100  # As percentage
+                
+                # Map to 0-2 scale (where 1% = 0.5, 2% = 1.0, 4% = 2.0)
+                volatility = min(2.0, max(0.1, normalized_atr * 0.5))
+                return volatility
+            else:
+                return 0.5
+                
+        except Exception as e:
+            logger.warning(f"ATR calculation failed: {str(e)}, using default")
+            return 0.5
     
     async def _get_open_positions(self) -> Dict[str, Any]:
         """Get current open positions."""
         return self.open_positions
     
     async def _get_symbol_correlation(self, symbol1: str, symbol2: str) -> float:
-        """Get correlation between two symbols (placeholder)."""
-        return 0.0  # Default no correlation
+        """
+        ✅ FIXED (Bug #37): Get correlation between two symbols using real market data.
+        
+        Previous implementation returned hardcoded 0.0 for all symbol pairs.
+        Now calculates Pearson correlation from historical price data.
+        
+        Args:
+            symbol1: First trading symbol
+            symbol2: Second trading symbol
+            
+        Returns:
+            Correlation coefficient (-1.0 to 1.0)
+        """
+        try:
+            # Check cache first
+            cache_key = tuple(sorted([symbol1, symbol2]))
+            if cache_key in self.correlation_cache:
+                cached_corr, timestamp = self.correlation_cache[cache_key]
+                if (datetime.now() - timestamp).total_seconds() < self.cache_ttl:
+                    logger.debug(f"Using cached correlation for {symbol1}/{symbol2}: {cached_corr:.4f}")
+                    return cached_corr
+            
+            # If no data provider, assume zero correlation (conservative)
+            if not self.data_provider:
+                logger.warning(f"No data provider available for correlation calculation, using default")
+                return 0.0
+            
+            # Get historical data for both symbols (last 30 days)
+            try:
+                end_time = datetime.now()
+                start_time = end_time - timedelta(days=30)
+                
+                # Fetch data for both symbols
+                data1 = await self.data_provider.get_ohlcv_data(
+                    symbol=symbol1,
+                    timeframe=Timeframe.H4,  # 4-hour timeframe for correlation
+                    start_time=start_time,
+                    end_time=end_time,
+                    count=180  # About 30 days of 4-hour data
+                )
+                
+                data2 = await self.data_provider.get_ohlcv_data(
+                    symbol=symbol2,
+                    timeframe=Timeframe.H4,
+                    start_time=start_time,
+                    end_time=end_time,
+                    count=180
+                )
+                
+                if data1 is None or data2 is None or data1.empty or data2.empty:
+                    logger.warning(f"Insufficient data for correlation {symbol1}/{symbol2}, using default")
+                    return 0.0
+                
+                # Calculate correlation
+                correlation = self._calculate_price_correlation(data1, data2)
+                
+                # Cache the result
+                self.correlation_cache[cache_key] = (correlation, datetime.now())
+                
+                logger.debug(f"Calculated correlation for {symbol1}/{symbol2}: {correlation:.4f}")
+                return correlation
+                
+            except Exception as e:
+                logger.warning(f"Failed to fetch data for correlation {symbol1}/{symbol2}: {str(e)}, using default")
+                return 0.0
+                
+        except Exception as e:
+            logger.error(f"Correlation calculation failed for {symbol1}/{symbol2}: {str(e)}, using default")
+            return 0.0  # Fallback to no correlation
+    
+    def _calculate_price_correlation(self, data1: pd.DataFrame, data2: pd.DataFrame) -> float:
+        """
+        Calculate Pearson correlation between two price series.
+        
+        Args:
+            data1: OHLCV DataFrame for symbol1
+            data2: OHLCV DataFrame for symbol2
+            
+        Returns:
+            Correlation coefficient (-1.0 to 1.0)
+        """
+        try:
+            # Extract close prices
+            closes1 = data1['close'].values
+            closes2 = data2['close'].values
+            
+            # Ensure both arrays have the same length (use the shorter one)
+            min_length = min(len(closes1), len(closes2))
+            if min_length < 10:  # Need at least 10 data points
+                return 0.0
+            
+            closes1 = closes1[-min_length:]
+            closes2 = closes2[-min_length:]
+            
+            # Calculate returns
+            returns1 = np.diff(np.log(closes1))
+            returns2 = np.diff(np.log(closes2))
+            
+            # Remove any NaN or inf values
+            mask = np.isfinite(returns1) & np.isfinite(returns2)
+            returns1 = returns1[mask]
+            returns2 = returns2[mask]
+            
+            if len(returns1) < 5:  # Need sufficient data
+                return 0.0
+            
+            # Calculate Pearson correlation
+            correlation = np.corrcoef(returns1, returns2)[0, 1]
+            
+            # Handle NaN result
+            if not np.isfinite(correlation):
+                return 0.0
+            
+            return float(correlation)
+            
+        except Exception as e:
+            logger.warning(f"Price correlation calculation failed: {str(e)}, using default")
+            return 0.0
     
     async def _calculate_current_portfolio_heat(self) -> float:
         """Calculate current portfolio heat."""

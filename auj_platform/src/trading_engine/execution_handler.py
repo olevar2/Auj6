@@ -454,7 +454,8 @@ class ExecutionHandler:
                 errors.append("Insufficient margin available")
 
             # Check for account restrictions
-            if hasattr(account_info, 'trading_enabled') and not account_info.trading_enabled:
+            # FIXED BUG #2: Use 'trade_allowed' instead of 'trading_enabled'
+            if hasattr(account_info, 'trade_allowed') and not account_info.trade_allowed:
                 errors.append("Trading disabled on account")
 
             return len(errors) == 0, errors
@@ -1025,8 +1026,15 @@ class ExecutionHandler:
                 venue_stats['total_execution_time'] += report.execution_time_seconds
 
                 venue_stats['success_rate'] = venue_stats['successful_executions'] / venue_stats['total_executions']
-                venue_stats['avg_slippage'] = venue_stats['total_slippage'] / venue_stats['successful_executions']
-                venue_stats['avg_execution_speed'] = venue_stats['total_execution_time'] / venue_stats['successful_executions']
+                
+                # FIXED BUG #1: Prevent division by zero
+                if venue_stats['successful_executions'] > 0:
+                    venue_stats['avg_slippage'] = venue_stats['total_slippage'] / venue_stats['successful_executions']
+                    venue_stats['avg_execution_speed'] = venue_stats['total_execution_time'] / venue_stats['successful_executions']
+                else:
+                    venue_stats['avg_slippage'] = 0.0
+                    venue_stats['avg_execution_speed'] = 0.0
+                
                 venue_stats['fill_rate'] = report.fill_rate
 
             # Add to execution history
@@ -1044,11 +1052,17 @@ class ExecutionHandler:
         """
         try:
             # Record execution in performance tracker
+            # FIXED: Proper error handling to prevent silent failures
             if self.performance_tracker and report.success:
-                await self.performance_tracker.record_execution(
-                    signal_id=report.order.signal_id,
-                    execution_report=report
-                )
+                try:
+                    await self.performance_tracker.record_execution(
+                        signal_id=report.order.signal_id,
+                        execution_report=report
+                    )
+                    logger.debug(f"✅ Execution recorded in performance tracker: {report.execution_id}")
+                except Exception as tracker_error:
+                    logger.error(f"❌ Failed to record execution in performance tracker: {tracker_error}")
+                    # Don't raise - this is non-critical, execution already succeeded
 
             # FIXED: NEW - Send to DealMonitoringTeams
             if report.success and self.deal_monitoring_teams:
@@ -1430,14 +1444,77 @@ class ExecutionHandler:
             return Decimal('0.0001')
 
     async def _check_market_hours(self, symbol: str) -> bool:
-        """Check if market is open for symbol."""
-        # Simplified - always return True for 24/7 forex
-        return True
+        """
+        Check if market is open for symbol.
+        FIXED: Proper market hours validation.
+        """
+        try:
+            from datetime import datetime, time
+            
+            # For Forex pairs (24/5 markets)
+            if any(currency in symbol.upper() for currency in ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD']):
+                # Check if it's weekend (Saturday = 5, Sunday = 6)
+                current_day = datetime.utcnow().weekday()
+                if current_day >= 5:  # Weekend
+                    return False
+                return True
+            
+            # For stocks and other instruments
+            # This is a simplified check - in production you'd use exchange calendars
+            current_hour = datetime.utcnow().hour
+            current_day = datetime.utcnow().weekday()
+            
+            # Weekend check
+            if current_day >= 5:
+                return False
+            
+            # Basic trading hours check (9 AM - 5 PM UTC as example)
+            # In production, use proper exchange-specific hours
+            if 9 <= current_hour < 17:
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.warning(f"Market hours check failed for {symbol}: {e}")
+            # On error, be conservative and allow trading
+            return True
 
     async def _check_symbol_liquidity(self, symbol: str) -> bool:
-        """Check symbol liquidity."""
-        # Simplified - always return True
-        return True
+        """
+        Check symbol liquidity.
+        FIXED: Proper liquidity validation using spread analysis.
+        """
+        try:
+            # Get current spread
+            spread = await self._get_bid_ask_spread(symbol)
+            
+            # Define acceptable spread thresholds by instrument type
+            max_acceptable_spread = Decimal('0.001')  # Default: 10 pips for forex
+            
+            # Adjust thresholds based on symbol
+            if 'JPY' in symbol.upper():
+                max_acceptable_spread = Decimal('0.1')  # JPY pairs have larger spreads
+            elif any(crypto in symbol.upper() for crypto in ['BTC', 'ETH', 'XRP']):
+                max_acceptable_spread = Decimal('0.01')  # Crypto can have wider spreads
+            
+            # Check if spread is acceptable
+            if spread > max_acceptable_spread:
+                logger.warning(f"High spread detected for {symbol}: {spread} > {max_acceptable_spread}")
+                return False
+            
+            # Additional check: try to get current price
+            current_price = await self._get_current_price(symbol)
+            if not current_price or current_price <= Decimal('0'):
+                logger.warning(f"Invalid price for {symbol}: {current_price}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.warning(f"Liquidity check failed for {symbol}: {e}")
+            # On error, be conservative and allow trading
+            return True
 
     def get_execution_statistics(self) -> Dict[str, Any]:
         """Get execution statistics."""

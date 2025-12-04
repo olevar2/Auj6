@@ -114,17 +114,90 @@ class TradingMetricsTracker:
             return False
     
     async def _load_historical_metrics(self):
-        """Load historical trading metrics from database."""
+        """Load historical trading metrics from database with REAL SQL queries."""
         if not self.database:
-            self.logger.info("📋 No database available for historical metrics")
+            self.logger.warning("⚠️ No database available for historical metrics")
             return
         
         try:
-            # This would load from database in a real implementation
-            self.logger.info("📈 Historical metrics loading simulated")
+            self.logger.info("📊 Loading historical trading metrics from database...")
+            
+            # ✅ FIX Bug #23-24: Load agent performance history from DB
+            perf_query = """
+                SELECT 
+                    agent_name, timeframe, win_rate, total_trades,
+                    winning_trades, losing_trades, total_profit, total_loss,
+                    average_win, average_loss, max_drawdown,
+                    sharpe_ratio, profit_factor, last_updated
+                FROM agent_performance_metrics
+                WHERE last_updated >= datetime('now', '-30 days')
+                ORDER BY last_updated DESC
+            """
+            
+            perf_result = await self.database.execute_query(perf_query, use_cache=False)
+            
+            if perf_result and perf_result.get('success'):
+                rows = perf_result.get('data', [])
+                self.logger.info(f"✅ Loaded {len(rows)} agent performance records from DB")
+                
+                # Populate agent performance metrics
+                for row in rows:
+                    agent_name = row['agent_name']
+                    if agent_name not in self._agent_performance:
+                        self._agent_performance[agent_name] = {}
+                    
+                    timeframe = row['timeframe']
+                    # Store as dict structure (for compatibility with existing code)
+                    self._agent_performance[agent_name][timeframe] = {
+                        'total_trades': row['total_trades'],
+                        'winning_trades': row['winning_trades'],
+                        'losing_trades': row['losing_trades'],
+                        'total_profit': row['total_profit'],
+                        'total_loss': row['total_loss'],
+                        'profits': [],  # Will be populated from recent trades
+                        'losses': [],
+                        'trade_durations': [],
+                        'last_updated': datetime.fromisoformat(row['last_updated'])
+                    }
+            
+            # ✅ FIX Bug #23: Load recent trades history from DB
+            trades_query = """
+                SELECT 
+                    agent_name, symbol, trade_type, entry_price, exit_price,
+                    volume, profit_loss, duration_seconds, entry_time, trade_id
+                FROM trades
+                WHERE exit_time >= datetime('now', '-7 days')
+                ORDER BY exit_time DESC
+                LIMIT 1000
+            """
+            
+            trades_result = await self.database.execute_query(trades_query, use_cache=False)
+            
+            if trades_result and trades_result.get('success'):
+                trades = trades_result.get('data', [])
+                self.logger.info(f"✅ Loaded {len(trades)} recent trades from DB")
+                
+                # Populate trades buffer
+                for trade_row in trades:
+                    trade_metric = TradeMetric(
+                        agent_name=trade_row['agent_name'],
+                        symbol=trade_row['symbol'],
+                        trade_type=trade_row['trade_type'],
+                        entry_price=trade_row['entry_price'],
+                        exit_price=trade_row.get('exit_price'),
+                        volume=trade_row['volume'],
+                        profit_loss=trade_row.get('profit_loss'),
+                        duration=trade_row.get('duration_seconds'),
+                        timestamp=datetime.fromisoformat(trade_row['entry_time']),
+                        trade_id=trade_row.get('trade_id')
+                    )
+                    self._trades_buffer.append(trade_metric)
+            
+            self.logger.info("✅ Historical metrics loaded successfully from database")
             
         except Exception as e:
-            self.logger.error(f"❌ Failed to load historical metrics: {e}")
+            self.logger.error(f"❌ Failed to load historical metrics from database: {e}")
+            # Continue running even if historical data fails to load
     
     async def _initialize_mission_metrics(self):
         """Initialize mission-specific tracking metrics."""

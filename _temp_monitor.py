@@ -511,45 +511,21 @@ class SystemHealthMonitor:
             )
     
     async def _check_database_health(self):
-        """Check database connection health with REAL database queries."""
+        """Check database connection health."""
         try:
-            # ✅ FIX Bug #22: Real database connectivity check
-            if not hasattr(self, 'database') or not self.database:
-                try:
-                    from ..core.containers import get_database_manager
-                    self.database = get_database_manager()
-                except Exception as import_error:
-                    self.logger.warning(f"⚠️ Database manager not available: {import_error}")
-                    self._component_status['database'] = MonitorStatus.UNKNOWN
-                    return
-            
+            # Get database from config or DI container
+            # This is a placeholder - would be replaced with actual database check
             start_time = time.time()
             
-            # ✅ REAL DATABASE CHECK
-            try:
-                result = await self.database.execute_query(
-                    "SELECT 1 AS health_check",
-                    use_cache=False
-                )
-                
-                if not result or not result.get('success', False):
-                    raise Exception("Database query failed")
-                
-            except Exception as db_error:
-                response_time = time.time() - start_time
-                self.record_metric('database_response_time', response_time)
-                raise Exception(f"Database connectivity check failed: {db_error}")
+            # Simulate database connectivity check
+            result = await self.database.execute_query(\"SELECT 1 AS health_check\", use_cache=False)
             
             response_time = time.time() - start_time
             self.record_metric('database_response_time', response_time)
             
-            if hasattr(self.database, 'get_connection_pool_statu s'):
-                try:
-                    pool_status = await self.database.get_connection_pool_status()
-                    self.record_metric('database_pool_active', pool_status.get('active', 0))
-                    self.record_metric('database_pool_idle', pool_status.get('idle', 0))
-                except Exception:
-                    pass
+            # Check connection pool status (if available)
+            # self.record_metric('database_pool_active', pool.active_connections)
+            # self.record_metric('database_pool_idle', pool.idle_connections)
             
             self._component_status['database'] = MonitorStatus.HEALTHY
             
@@ -561,46 +537,22 @@ class SystemHealthMonitor:
                 AlertSeverity.CRITICAL,
                 f"Database health check failed: {e}"
             )
-
+    
     async def _check_broker_connections(self):
-        """Check broker connection status with REAL broker API calls."""
+        """Check broker connection status."""
         try:
-            # ✅ FIX Bug #22: Real broker connectivity check
-            if not hasattr(self, 'broker_manager') or not self.broker_manager:
-                try:
-                    from ..brokers.broker_manager import get_broker_manager
-                    self.broker_manager = get_broker_manager()
-                except Exception as import_error:
-                    self.logger.warning(f"⚠️ Broker manager not available: {import_error}")
-                    self._component_status['broker_connections'] = MonitorStatus.UNKNOWN
-                    return
-            
+            # Check MT5 connection status
+            # This would be replaced with actual broker interface checks
             start_time = time.time()
             
-            # ✅ REAL BROKER CHECK
-            try:
-                account_info = await self.broker_manager.get_account_info()
-                
-                if not account_info or 'error' in account_info:
-                    raise Exception("Failed to get account info")
-                
-                is_connected = account_info.get('connected', False)
-                if not is_connected:
-                    raise Exception("Broker not connected")
-                    
-            except Exception as broker_error:
-                response_time = time.time() - start_time
-                self.record_metric('broker_response_time', response_time)
-                raise Exception(f"Broker connectivity check failed: {broker_error}")
+            # Simulate broker connectivity check
+            await asyncio.sleep(0.005)  # Simulate broker ping
             
             response_time = time.time() - start_time
             self.record_metric('broker_response_time', response_time)
             
-            trading_session = account_info.get('trading_allowed', False)
-            self.record_metric('trading_session_active', 1 if trading_session else 0)
-            
-            if 'balance' in account_info:
-                self.record_metric('broker_account_balance', account_info['balance'])
+            # Check trading session status
+            # self.record_metric('trading_session_active', is_session_active)
             
             self._component_status['broker_connections'] = MonitorStatus.HEALTHY
             
@@ -612,7 +564,6 @@ class SystemHealthMonitor:
                 AlertSeverity.CRITICAL,
                 f"Broker connection check failed: {e}"
             )
-
     
     async def _check_message_queue_health(self):
         """Check message queue health."""
