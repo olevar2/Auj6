@@ -58,12 +58,16 @@ class DashboardOverviewResponse(BaseModel):
     active_agents: List[str] = Field(..., description="List of currently active agent names")
     alpha_agent: Optional[str] = Field(None, description="Current Alpha agent name")
     daily_pnl: float = Field(..., description="Today's profit and loss")
-    total_equity: float = Field(..., description="Total account equity")
+    total_equity: Optional[float] = Field(None, description="Total account equity (null if unavailable)")
     active_positions: int = Field(..., description="Number of active trading positions")
     win_rate: float = Field(..., description="Overall win rate percentage")
     market_regime: Optional[str] = Field(None, description="Current market regime")
     volatility: Optional[float] = Field(None, description="Current market volatility")
     last_updated: str = Field(..., description="Last update timestamp")
+    data_quality: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Data quality indicators: REAL/FALLBACK/UNAVAILABLE with optional reason"
+    )
 
 
 class GradedDealResponse(BaseModel):
@@ -115,6 +119,10 @@ class OptimizationMetricsResponse(BaseModel):
     overfitting_indicators: Dict[str, float]
     system_health: Dict[str, Any]
     last_updated: str
+    data_quality: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Data quality indicators for metrics"
+    )
 
 
 class AccountResponse(BaseModel):
@@ -135,8 +143,9 @@ class AccountResponse(BaseModel):
 class APIComponents:
     """Container for API component dependencies."""
 
-    def __init__(self):
+    def __init__(self, production_mode: bool = False):
         # Note: This class now requires config_manager parameter in __init__
+        self.production_mode = production_mode  # ✅ NEW: Control strict vs lenient data validation
         self.config_manager = None  # Will be initialized in initialize()
         self.performance_tracker: Optional[PerformanceTracker] = None
         self.hierarchy_manager: Optional[HierarchyManager] = None
@@ -386,8 +395,14 @@ async def get_dashboard_overview(
             active_agents.append(agent.name)
 
         # Get current market conditions from coordinator if available
-        current_regime = MarketRegime.SIDEWAYS  # Default fallback
-        volatility = 0.15  # Default fallback
+        # Track data quality for all fields
+        data_quality = {}
+        
+        # Market regime and volatility - NO HARDCODED FALLBACKS
+        current_regime = None
+        volatility = None
+        data_quality['market_regime'] = 'UNAVAILABLE'
+        data_quality['volatility'] = 'UNAVAILABLE'
 
         try:
             # Try to get real market regime from coordinator's regime analysis
@@ -396,19 +411,26 @@ async def get_dashboard_overview(
                 components.coordinator.regime_detector):
                 regime_data = await components.coordinator.regime_detector.get_current_regime()
                 if regime_data:
-                    current_regime = regime_data.get('regime', MarketRegime.SIDEWAYS)
-                    volatility = regime_data.get('volatility', 0.15)
+                    current_regime = regime_data.get('regime')
+                    volatility = regime_data.get('volatility')
+                    if current_regime:
+                        data_quality['market_regime'] = 'REAL'
+                    if volatility is not None:
+                        data_quality['volatility'] = 'REAL'
             # Fallback to data provider's market analysis
             elif components.data_provider_manager:
                 market_data = await components.data_provider_manager.get_market_conditions()
                 if market_data:
-                    volatility = market_data.get('volatility', 0.15)
+                    volatility = market_data.get('volatility')
+                    if volatility is not None:
+                        data_quality['volatility'] = 'REAL'
         except Exception as e:
-            logger.warning(f"Could not get current market regime: {e}")
+            logger.error(f"Failed to get current market regime: {e}")
 
         # Calculate daily P&L from actual performance tracker
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         daily_pnl = 0.0
+        data_quality['daily_pnl'] = 'REAL'
 
         # Get recent trades for daily P&L calculation using actual tracker data
         completed_trades = getattr(components.performance_tracker, 'completed_trades', {})
@@ -418,21 +440,44 @@ async def get_dashboard_overview(
                 hasattr(trade, 'pnl') and trade.pnl):
                 daily_pnl += float(trade.pnl)
 
-        # Get real equity from risk manager if available
-        total_equity = 10000.0  # Default fallback
+        # Get real equity from risk manager - CRITICAL DATA, NO FALLBACK
+        total_equity = None
+        data_quality['total_equity'] = 'UNAVAILABLE - No equity source connected'
+        
         try:
             if (components.risk_manager and
                 hasattr(components.risk_manager, 'get_current_equity')):
                 total_equity = await components.risk_manager.get_current_equity()
+                data_quality['total_equity'] = 'REAL'
             elif (components.coordinator and
                   hasattr(components.coordinator, 'get_account_equity')):
                 total_equity = await components.coordinator.get_account_equity()
+                data_quality['total_equity'] = 'REAL'
             else:
-                # Fallback: use performance tracker's equity estimation
-                total_equity = 10000.0 + daily_pnl
+                # CRITICAL: No equity source available
+                if components.production_mode:
+                    # Production mode: FAIL FAST
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Account equity unavailable. Risk manager not connected."
+                    )
+                else:
+                    # Development mode: Allow null but warn clearly
+                    logger.warning("⚠️ NO EQUITY SOURCE - total_equity will be null")
+                    total_equity = None
+                    data_quality['total_equity'] = 'UNAVAILABLE - Development mode'
+        except HTTPException:
+            raise
         except Exception as e:
-            logger.warning(f"Could not get real account equity: {e}")
-            total_equity = 10000.0 + daily_pnl  # Fallback calculation
+            logger.error(f"Failed to get account equity: {e}")
+            if components.production_mode:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"Cannot retrieve account equity: {str(e)}"
+                )
+            else:
+                total_equity = None
+                data_quality['total_equity'] = f'ERROR - {str(e)}'
 
         # Determine system status based on actual component health
         system_status = "ACTIVE"
@@ -462,9 +507,10 @@ async def get_dashboard_overview(
             total_equity=total_equity,
             active_positions=performance_summary.get("active_trades", 0),
             win_rate=performance_summary.get("win_rate", 0.0) * 100,  # Convert to percentage
-            market_regime=current_regime.value if hasattr(current_regime, 'value') else str(current_regime),
+            market_regime=current_regime.value if hasattr(current_regime, 'value') else str(current_regime) if current_regime else None,
             volatility=volatility,
-            last_updated=datetime.utcnow().isoformat()
+            last_updated=datetime.utcnow().isoformat(),
+            data_quality=data_quality  # ✅ NEW: Data quality tracking
         )
 
     except Exception as e:
@@ -892,25 +938,27 @@ async def get_optimization_metrics(
 
         # Indicator Efficiency - get from indicator engine
         indicator_efficiency = {}
+        data_quality_indicators = 'UNAVAILABLE'
+        
         try:
             if (components.indicator_engine and
                 hasattr(components.indicator_engine, 'get_indicator_effectiveness')):
                 effectiveness_scores = await components.indicator_engine.get_indicator_effectiveness()
-                indicator_efficiency = effectiveness_scores or {}
+                if effectiveness_scores:
+                    indicator_efficiency = effectiveness_scores
+                    data_quality_indicators = 'REAL'
             elif hasattr(components.indicator_engine, 'indicator_scores'):
                 indicator_efficiency = getattr(components.indicator_engine, 'indicator_scores', {})
-            else:
-                # Fallback to commonly used indicators
-                logger.warning("No indicator effectiveness data available, using fallback values")
-                indicator_efficiency = {
-                    "rsi_indicator": 0.75,
-                    "macd_indicator": 0.68,
-                    "bollinger_bands_indicator": 0.72,
-                    "sma_crossover": 0.65,
-                    "ema_crossover": 0.70
-                }
+                if indicator_efficiency:
+                    data_quality_indicators = 'REAL'
+            
+            # NO FALLBACK - if no data, return empty dict with clear quality indicator
+            if not indicator_efficiency:
+                logger.warning("⚠️ No indicator effectiveness data available from engine")
+                data_quality_indicators = 'UNAVAILABLE - Indicator engine not configured'
         except Exception as e:
-            logger.warning(f"Could not get indicator efficiency: {e}")
+            logger.error(f"Failed to get indicator efficiency: {e}")
+            data_quality_indicators = f'ERROR - {str(e)}'
             indicator_efficiency = {}
 
         # Out-of-Sample Performance - get actual OOS data
@@ -1008,7 +1056,8 @@ async def get_optimization_metrics(
             out_of_sample_performance=oos_performance,
             overfitting_indicators=overfitting_indicators,
             system_health=system_health,
-            last_updated=datetime.utcnow().isoformat()
+            last_updated=datetime.utcnow().isoformat(),
+            data_quality={'indicator_efficiency': data_quality_indicators}  # ✅ NEW
         )
 
     except Exception as e:
@@ -1193,19 +1242,23 @@ async def get_accounts_list(
             try:
                 account_info = await components.coordinator.get_account_info()
                 if account_info:
-                    accounts.append(AccountResponse(
-                        account_id=account_info.get("account_id", "PRIMARY_ACCOUNT"),
-                        broker=account_info.get("broker", "MetaTrader 5"),
-                        account_type=account_info.get("account_type", "DEMO"),
-                        currency=account_info.get("currency", "USD"),
-                        balance=float(account_info.get("balance", 10000.0)),
-                        equity=float(account_info.get("equity", 10000.0)),
-                        margin_available=float(account_info.get("margin_available", 9500.0)),
-                        margin_used=float(account_info.get("margin_used", 500.0)),
-                        is_active=account_info.get("is_active", True),
-                        last_updated=datetime.utcnow().isoformat()
-                    ))
-                    return accounts
+                    # Validate required fields are present
+                    if not all(key in account_info for key in ['balance', 'equity']):
+                        logger.warning("⚠️ Account info missing required fields, skipping")
+                    else:
+                        accounts.append(AccountResponse(
+                            account_id=account_info.get("account_id", "PRIMARY_ACCOUNT"),
+                            broker=account_info.get("broker", "MetaTrader 5"),
+                            account_type=account_info.get("account_type", "DEMO"),
+                            currency=account_info.get("currency", "USD"),
+                            balance=float(account_info.get("balance")),
+                            equity=float(account_info.get("equity")),
+                            margin_available=float(account_info.get("margin_available", 0.0)),
+                            margin_used=float(account_info.get("margin_used", 0.0)),
+                            is_active=account_info.get("is_active", True),
+                            last_updated=datetime.utcnow().isoformat()
+                        ))
+                        return accounts
             except Exception as e:
                 logger.warning(f"Could not get account info from coordinator: {e}")
 
@@ -1234,34 +1287,20 @@ async def get_accounts_list(
             except Exception as e:
                 logger.warning(f"Could not get account info from data providers: {e}")
 
-        # Fallback to demo accounts if no real account data available
-        logger.info("No real account data available, providing demo account information")
-        accounts = [
-            AccountResponse(
-                account_id="DEMO_MT5_001",
-                broker="MetaTrader 5",
-                account_type="DEMO",
-                currency="USD",
-                balance=10000.0,
-                equity=10250.0,
-                margin_available=9800.0,
-                margin_used=200.0,
-                is_active=True,
-                last_updated=datetime.utcnow().isoformat()
-            ),
-            AccountResponse(
-                account_id="DEMO_SIMULATION",
-                broker="Internal Simulator",
-                account_type="SIMULATION",
-                currency="USD",
-                balance=5000.0,
-                equity=5125.0,
-                margin_available=4900.0,
-                margin_used=100.0,
-                is_active=False,
-                last_updated=datetime.utcnow().isoformat()
-            )
-        ]
+        # NO FAKE DEMO ACCOUNTS - return empty or error based on mode
+        if not accounts:
+            logger.error("❌ No account data available from any source")
+            
+            if components.production_mode:
+                # Production: FAIL - account data is critical
+                raise HTTPException(
+                    status_code=503,
+                    detail="Account information unavailable. Please check broker connections."
+                )
+            else:
+                # Development: Return empty with clear warning
+                logger.warning("⚠️ RETURNING EMPTY ACCOUNTS LIST - Development mode")
+                return []
 
         return accounts
 
