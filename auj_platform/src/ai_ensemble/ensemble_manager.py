@@ -18,6 +18,7 @@ from .ensemble_models import (
     VotingMethod, ModelType
 )
 from ..core.logging_setup import get_logger
+from ..core.unified_config import UnifiedConfigManager
 
 logger = get_logger(__name__)
 
@@ -34,20 +35,21 @@ class EnsembleManager:
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        # Note: This class now requires config_manager parameter in __init__
-        # self.config_manager = config_manager or UnifiedConfigManager()
         self.config = config or {}
+        # Initialize config manager
+        self.config_manager = UnifiedConfigManager()
+        
         self.models: List[BaseEnsembleModel] = []
         self.model_performance_history = {}
         self.training_history = []
         self.prediction_history = []
         
-        # Configuration parameters
-        self.min_models = self.config_manager.get_int('min_models', 3)
-        self.max_models = self.config_manager.get_int('max_models', 7)
-        self.data_subset_ratio = self.config_manager.get_float('data_subset_ratio', 0.8)
-        self.performance_window = self.config_manager.get_int('performance_window', 50)
-        self.consensus_threshold = self.config_manager.get_float('consensus_threshold', 0.6)
+        # Configuration parameters (Prioritize passed config, then global config, then default)
+        self.min_models = self.config.get('min_models', self.config_manager.get_int('min_models', 3))
+        self.max_models = self.config.get('max_models', self.config_manager.get_int('max_models', 7))
+        self.data_subset_ratio = self.config.get('data_subset_ratio', self.config_manager.get_float('data_subset_ratio', 0.8))
+        self.performance_window = self.config.get('performance_window', self.config_manager.get_int('performance_window', 50))
+        self.consensus_threshold = self.config.get('consensus_threshold', self.config_manager.get_float('consensus_threshold', 0.6))
         
         self._initialize_models()
         

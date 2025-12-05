@@ -169,6 +169,8 @@ class PerformanceTracker:
         # Validation tracking
         self.validation_periods: Dict[str, Dict[str, datetime]] = {}
         self.current_validation_mode: ValidationPeriodType = ValidationPeriodType.LIVE_TRADING
+        # ✅ FIX Bug #49: Track current validation period ID for safe updates
+        self.current_validation_period_id: Optional[str] = None
 
         # Performance windows for rolling metrics
         self.rolling_window_size = self.config.get('rolling_window_size', 100)
@@ -475,6 +477,9 @@ class PerformanceTracker:
             'start_time': start_time or datetime.utcnow(),
             'description': description
         }
+        
+        # ✅ FIX Bug #49: Store period_id for later reference in reset_validation_period()
+        self.current_validation_period_id = period_id
 
         # Save to database using unified abstraction
         try:
@@ -1550,17 +1555,31 @@ class PerformanceTracker:
         current_time = datetime.utcnow()
 
         try:
-            # Using unified database manager instead of direct sqlite3
-            # Update the end time of the current period
-            self.database.execute_query_sync("""
-                UPDATE validation_periods
-                SET end_time = ?
-                WHERE end_time IS NULL
-            """, (current_time,), use_cache=False)
+            # ✅ FIX Bug #49: Close SPECIFIC period by period_id to avoid race condition
+            # This prevents accidentally closing validation periods from other agents/symbols
+            if self.current_validation_period_id:
+                # Use specific period_id - safest approach
+                self.database.execute_query_sync("""
+                    UPDATE validation_periods
+                    SET end_time = ?
+                    WHERE period_id = ? AND end_time IS NULL
+                """, (current_time, self.current_validation_period_id), use_cache=False)
+                logger.debug(f"Closed validation period: {self.current_validation_period_id}")
+            else:
+                # Fallback: Close by period_type (safer than no filter, but not ideal)
+                # This should rarely happen, only if period wasn't properly initialized
+                logger.warning("No current_validation_period_id found, falling back to period_type filter")
+                self.database.execute_query_sync("""
+                    UPDATE validation_periods
+                    SET end_time = ?
+                    WHERE period_type = ? AND end_time IS NULL
+                    ORDER BY start_time DESC
+                    LIMIT 1
+                """, (current_time, self.current_validation_mode.value), use_cache=False)
         except Exception as e:
             logger.error(f"Failed to close validation period: {str(e)}")
 
-        # Set new validation period
+        # Set new validation period (this will update current_validation_period_id)
         self.set_validation_period(new_period_type, current_time, description)
 
         logger.info(f"Validation period reset to {new_period_type.value}: {description}")

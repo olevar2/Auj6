@@ -333,6 +333,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ✨ OPPORTUNITY RADAR API ROUTER
+from .radar_api import router as radar_router
+app.include_router(radar_router)
+
 
 def get_components() -> APIComponents:
     """Dependency to get initialized components."""

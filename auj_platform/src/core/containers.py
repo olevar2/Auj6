@@ -84,6 +84,9 @@ from ..coordination.messaging_coordinator import MessagingCoordinator
 # ✅ BUG #35 FIX: Trading Orchestrator - The Missing Loop!
 from .orchestrator import TradingOrchestrator
 
+# ✨ CROWN JEWEL: OpportunityRadar for intelligent pair selection
+from ..coordination.opportunity_radar import OpportunityRadar
+
 
 # ============================================================================
 # FACTORY FUNCTIONS FOR UNIFIED PROVIDERS
@@ -301,13 +304,26 @@ class PlatformContainer(containers.DeclarativeContainer):
         config=config
     )
 
+    # ✨ CROWN JEWEL: OpportunityRadar for intelligent pair selection
+    # Scans ALL pairs, ranks by opportunity score, picks BEST trade!
+    opportunity_radar = providers.Singleton(
+        OpportunityRadar,
+        data_provider=data_provider_manager,
+        regime_classifier=regime_classifier,
+        risk_manager=dynamic_risk_manager,
+        config_manager=unified_config_manager,
+        genius_coordinator=genius_agent_coordinator
+    )
+
     # ✅ BUG #35 FIX: Trading Orchestrator - CRITICAL MISSING COMPONENT!
-    # This orchestrator runs the hourly trading loop that executes analysis cycles
+    # ✨ ENHANCED: Now with OpportunityRadar for intelligent pair selection!
     trading_orchestrator = providers.Singleton(
         TradingOrchestrator,
         genius_coordinator=genius_agent_coordinator,
         config_manager=unified_config_manager,
-        execution_handler=execution_handler
+        execution_handler=execution_handler,
+        economic_monitor=economic_monitor,
+        opportunity_radar=opportunity_radar  # ✨ CROWN JEWEL INTEGRATION
     )
 
 
